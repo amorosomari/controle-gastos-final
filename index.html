@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos Anual com Parcelamentos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 50%, #f9a8d4 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(236, 72, 153, 0.15);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            border-bottom: 5px solid #be123c;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 50px 40px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #f3e8f5;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-size: 1em;
+            cursor: pointer;
+            color: #9ca3af;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            color: #ec4899;
+            border-bottom-color: #ec4899;
+        }
+
+        .tab-btn:hover {
+            color: #db2777;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {{ opacity: 0; }}
+            to {{ opacity: 1; }}
+        }
+
+        .table-container {
+            background: #faf5ff;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px solid #f9a8d4;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        thead tr {
+            background: linear-gradient(90deg, #ec4899 0%, #db2777 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            padding: 18px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.95em;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 16px 18px;
+            border-bottom: 1px solid #fbcfe8;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #fce7f3;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #ffffff;
+        }
+
+        .categoria-fixo {{
+            background: #fce7f3;
+            color: #be123c;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: inline-block;
+        }}
+
+        .categoria-compras {{
+            background: #fcd34d;
+            color: #78350f;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: inline-block;
+        }}
+
+        .tipo-recorrente {{
+            background: #d1d5db;
+            color: #1f2937;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }}
+
+        .tipo-parcelado {{
+            background: #c084fc;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }}
+
+        .status-pendente {{
+            background: #fecaca;
+            color: #7f1d1d;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }}
+
+        .status-pago {{
+            background: #bbf7d0;
+            color: #15803d;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }}
+
+        .checkbox-cell {{
+            text-align: center;
+            font-size: 1.3em;
+            cursor: pointer;
+        }}
+
+        .summary-container {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }}
+
+        .summary-card {{
+            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #ec4899;
+            box-shadow: 0 8px 20px rgba(236, 72, 153, 0.1);
+            transition: transform 0.3s ease;
+        }}
+
+        .summary-card:hover {{
+            transform: translateY(-5px);
+        }}
+
+        .summary-card h3 {{
+            color: #7f1d1d;
+            font-size: 0.95em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+
+        .summary-card .value {{
+            font-size: 2em;
+            color: #ec4899;
+            font-weight: 700;
+        }}
+
+        .chart-container {{
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            border: 2px solid #f9a8d4;
+            text-align: center;
+        }}
+
+        .chart-container img {{
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }}
+
+        .instructions-container {{
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border-left: 5px solid #db2777;
+            margin-top: 30px;
+        }}
+
+        .instructions-container h2 {{
+            color: #ec4899;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }}
+
+        .instructions-container ol {{
+            list-style-position: inside;
+            color: #7f1d1d;
+            line-height: 2;
+            font-weight: 500;
+        }}
+
+        .instructions-container li {{
+            margin-bottom: 12px;
+        }}
+
+        .add-button {{
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }}
+
+        .add-button:hover {{
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3);
+        }}
+
+        .form-group {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #f9a8d4;
+        }}
+
+        input, select {{
+            padding: 12px;
+            border: 2px solid #fbcfe8;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: border-color 0.3s ease;
+        }}
+
+        input:focus, select:focus {{
+            outline: none;
+            border-color: #ec4899;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+        }}
+
+        label {{
+            display: block;
+            color: #7f1d1d;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }}
+
+        .form-group > div {{
+            display: flex;
+            flex-direction: column;
+        }}
+
+        .month-selector {{
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }}
+
+        .month-selector label {{
+            margin: 0;
+            margin-bottom: 0;
+        }}
+
+        .month-selector select {{
+            flex: 1;
+            max-width: 300px;
+        }}
+
+        footer {{
+            text-align: center;
+            padding: 30px;
+            color: #999;
+            font-size: 0.9em;
+            background: #faf5ff;
+            border-top: 2px solid #f9a8d4;
+        }}
+
+        .parcela-info {{
+            background: #e9d5ff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #6b21a8;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Controle de Gastos Anual</h1>
+            <p>Gerencie seus gastos, parcelamentos e projeções mensais</p>
+        </div>
+
+        <div class="content">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('gastos')">📊 Meus Gastos</button>
+                <button class="tab-btn" onclick="switchTab('parcelamentos')">💳 Parcelamentos</button>
+                <button class="tab-btn" onclick="switchTab('graficos')">📈 Análise Anual</button>
+                <button class="tab-btn" onclick="switchTab('dicas')">💡 Dicas</button>
+            </div>
+
+            <!-- TAB GASTOS -->
+            <div id="gastos" class="tab-content active">
+                <div class="month-selector">
+                    <label for="mesSelect">Visualizar Mês:</label>
+                    <select id="mesSelect" onchange="carregarMes()">
+                        <option value="0">Janeiro</option>
+                        <option value="1">Fevereiro</option>
+                        <option value="2">Março</option>
+                        <option value="3">Abril</option>
+                        <option value="4">Maio</option>
+                        <option value="5">Junho</option>
+                        <option value="6">Julho</option>
+                        <option value="7">Agosto</option>
+                        <option value="8">Setembro</option>
+                        <option value="9">Outubro</option>
+                        <option value="10">Novembro</option>
+                        <option value="11">Dezembro</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <label>Data</label>
+                        <input type="date" id="inputData">
+                    </div>
+                    <div>
+                        <label>Descrição</label>
+                        <input type="text" id="inputDesc" placeholder="Ex: Aluguel">
+                    </div>
+                    <div>
+                        <label>Categoria</label>
+                        <select id="inputCat">
+                            <option value="">Selecione...</option>
+                            <option value="Fixo">Fixo</option>
+                            <option value="Compras">Compras</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Valor (R$)</label>
+                        <input type="number" id="inputVal" placeholder="0,00" step="0.01">
+                    </div>
+                    <div>
+                        <label>Parcelas</label>
+                        <input type="number" id="inputParcelas" placeholder="1" min="1" max="12" value="1">
+                    </div>
+                </div>
+                <button class="add-button" onclick="adicionarGasto()">+ Adicionar Gasto</button>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                                <th>Parcela</th>
+                                <th>Tipo</th>
+                                <th>Pago?</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaGastos">
+                            <tr>
+                                <td>01/01/2026</td>
+                                <td>Aluguel</td>
+                                <td><span class="categoria-fixo">Fixo</span></td>
+                                <td>R$ 1.500,00</td>
+                                <td><span class="parcela-info">1/1</span></td>
+                                <td><span class="tipo-recorrente">Recorrente</span></td>
+                                <td class="checkbox-cell" onclick="marcarPago(this)">☐</td>
+                                <td><span class="status-pendente">Pendente</span></td>
+                                <td><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                            </tr>
+                            <tr>
+                                <td>01/01/2026</td>
+                                <td>Água e Luz</td>
+                                <td><span class="categoria-fixo">Fixo</span></td>
+                                <td>R$ 200,00</td>
+                                <td><span class="parcela-info">1/1</span></td>
+                                <td><span class="tipo-recorrente">Recorrente</span></td>
+                                <td class="checkbox-cell" onclick="marcarPago(this)">☐</td>
+                                <td><span class="status-pendente">Pendente</span></td>
+                                <td><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                            </tr>
+                            <tr>
+                                <td>05/01/2026</td>
+                                <td>Notebook</td>
+                                <td><span class="categoria-compras">Compras</span></td>
+                                <td>R$ 1.000,00</td>
+                                <td><span class="parcela-info">1/3</span></td>
+                                <td><span class="tipo-parcelado">Parcelado</span></td>
+                                <td class="checkbox-cell" onclick="marcarPago(this)">☐</td>
+                                <td><span class="status-pendente">Pendente</span></td>
+                                <td><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="summary-container">
+                    <div class="summary-card">
+                        <h3>💰 Total Fixo</h3>
+                        <div class="value" id="totalFixo">R$ 1.700,00</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>🛍️ Total Compras</h3>
+                        <div class="value" id="totalCompras">R$ 1.000,00</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>📊 Total Mês</h3>
+                        <div class="value" id="totalMes">R$ 2.700,00</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>✅ Total Pago</h3>
+                        <div class="value" id="totalPago">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB PARCELAMENTOS -->
+            <div id="parcelamentos" class="tab-content">
+                <div class="instructions-container">
+                    <h2>💳 Sistema de Parcelamentos</h2>
+                    <p style="color: #7f1d1d; margin-bottom: 20px; font-weight: 500;">
+                        Quando você adiciona um gasto com múltiplas parcelas, o sistema cria automaticamente as demais parcelas nos próximos meses.
+                    </p>
+                    <h3 style="color: #ec4899; margin-top: 20px; margin-bottom: 10px;">Exemplo prático:</h3>
+                    <p style="color: #7f1d1d; font-weight: 500;">
+                        ✨ Se você comprou um Notebook de R$ 1.200 em 3 parcelas em Janeiro:<br>
+                        • Janeiro: Notebook 1/3 - R$ 400,00<br>
+                        • Fevereiro: Notebook 2/3 - R$ 400,00<br>
+                        • Março: Notebook 3/3 - R$ 400,00
+                    </p>
+                </div>
+
+                <div class="table-container" style="margin-top: 30px;">
+                    <h2 style="color: #ec4899; margin-bottom: 20px; font-size: 1.3em;">📋 Parcelas Ativas</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Valor Total</th>
+                                <th>Valor da Parcela</th>
+                                <th>Total de Parcelas</th>
+                                <th>Próxima em</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaParcelas">
+                            <tr>
+                                <td>Notebook</td>
+                                <td>R$ 3.000,00</td>
+                                <td>R$ 1.000,00</td>
+                                <td>3</td>
+                                <td>Fevereiro (Parcela 2/3)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB GRÁFICOS -->
+            <div id="graficos" class="tab-content">
+                <div class="chart-container">
+                    <h2 style="color: #ec4899; margin-bottom: 20px;">Distribuição Anual de Gastos</h2>
+                    <img src="[IMAGE_URL]" alt="Gráfico de Gastos Anual">
+                </div>
+                <div class="summary-container">
+                    <div class="summary-card">
+                        <h3>💳 Gastos Fixos (Ano)</h3>
+                        <div class="value">R$ 21.840</div>
+                        <p style="color: #7f1d1d; margin-top: 10px; font-weight: 500;">1.820/mês</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>🎁 Compras Avulsas</h3>
+                        <div class="value">R$ 530,50</div>
+                        <p style="color: #7f1d1d; margin-top: 10px; font-weight: 500;">Parcela inicial</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>💰 Parcelamentos</h3>
+                        <div class="value">R$ 5.400</div>
+                        <p style="color: #7f1d1d; margin-top: 10px; font-weight: 500;">Distribuído nos meses</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB DICAS -->
+            <div id="dicas" class="tab-content">
+                <div class="instructions-container">
+                    <h2>💡 Como Usar Parcelamentos</h2>
+                    <ol>
+                        <li><strong>Adicione um gasto parcelado:</strong> Na aba "Meus Gastos", defina quantas parcelas você quer (ex: 3 para compra de 3x)</li>
+                        <li><strong>O sistema cria automaticamente:</strong> As parcelas aparecerão nos próximos meses com a descrição atualizada (Produto 1/3, 2/3, 3/3)</li>
+                        <li><strong>Cada parcela é independente:</strong> Você pode marcar como pago individualmente conforme o cartão cobra</li>
+                        <li><strong>Visualize futuro:</strong> Mude entre meses no selector para ver suas obrigações futuras</li>
+                        <li><strong>Acompanhe parcelas:</strong> Na aba "Parcelamentos" você vê um resumo de tudo que está parcelado</li>
+                        <li><strong>Organize financeiro:</strong> Veja com antecedência quanto você terá comprometido em cada mês</li>
+                        <li><strong>Planeje melhor:</strong> Use os dados para entender seus gastos e não fazer compras que não caibam no orçamento</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>✨ Controle de Gastos Anual com Parcelamentos - Versão 2.0 | Desenvolvido com ❤️ em Rosa</p>
+        </footer>
+    </div>
+
+    <script>
+        const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        function switchTab(tabName) {{
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }}
+
+        function carregarMes() {{
+            const mesIdx = document.getElementById('mesSelect').value;
+            alert(`Mês selecionado: ${{meses[mesIdx]}}`);
+        }}
+
+        function marcarPago(cell) {{
+            const checkbox = cell.textContent.trim();
+            if (checkbox === '☐') {{
+                cell.textContent = '☑';
+                const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
+                statusCell.innerHTML = '<span class="status-pago">Pago</span>';
+            }} else {{
+                cell.textContent = '☐';
+                const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
+                statusCell.innerHTML = '<span class="status-pendente">Pendente</span>';
+            }}
+            atualizarTotais();
+        }}
+
+        function adicionarGasto() {{
+            const data = document.getElementById('inputData').value;
+            const desc = document.getElementById('inputDesc').value;
+            const cat = document.getElementById('inputCat').value;
+            const val = document.getElementById('inputVal').value;
+            const parcelas = parseInt(document.getElementById('inputParcelas').value) || 1;
+
+            if (!data || !desc || !cat || !val) {{
+                alert('Preencha todos os campos!');
+                return;
+            }}
+
+            const valor = parseFloat(val);
+            const valorParcela = (valor / parcelas).toFixed(2);
+            const catSpan = cat === 'Fixo' 
+                ? `<span class="categoria-fixo">Fixo</span>` 
+                : `<span class="categoria-compras">Compras</span>`;
+            const tipo = parcelas > 1 ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
+
+            const newRow = `
+                <tr>
+                    <td>${{data}}</td>
+                    <td>${{desc}}</td>
+                    <td>${{catSpan}}</td>
+                    <td>R$ ${{parseFloat(valorParcela).toLocaleString('pt-BR', {{minimumFractionDigits: 2}})}}</td>
+                    <td><span class="parcela-info">1/${{parcelas}}</span></td>
+                    <td>${{tipo}}</td>
+                    <td class="checkbox-cell" onclick="marcarPago(this)">☐</td>
+                    <td><span class="status-pendente">Pendente</span></td>
+                    <td><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                </tr>
+            `;
+
+            document.getElementById('tabelaGastos').insertAdjacentHTML('beforeend', newRow);
+
+            document.getElementById('inputData').value = '';
+            document.getElementById('inputDesc').value = '';
+            document.getElementById('inputCat').value = '';
+            document.getElementById('inputVal').value = '';
+            document.getElementById('inputParcelas').value = '1';
+
+            atualizarTotais();
+        }}
+
+        function deletarGasto(btn) {{
+            btn.closest('tr').remove();
+            atualizarTotais();
+        }}
+
+        function atualizarTotais() {{
+            let totalFixo = 0, totalCompras = 0, totalPago = 0;
+            const rows = document.querySelectorAll('#tabelaGastos tr');
+
+            rows.forEach(row => {{
+                const cat = row.querySelector('td:nth-child(3)').textContent;
+                const valor = parseFloat(row.querySelector('td:nth-child(4)').textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
+                const pago = row.querySelector('td:nth-child(7)').textContent.includes('☑');
+
+                if (cat.includes('Fixo')) {{
+                    totalFixo += valor;
+                }} else if (cat.includes('Compras')) {{
+                    totalCompras += valor;
+                }}
+
+                if (pago) {{
+                    totalPago += valor;
+                }}
+            }});
+
+            const totalMes = totalFixo + totalCompras;
+
+            document.getElementById('totalFixo').textContent = 'R$ ' + totalFixo.toLocaleString('pt-BR', {{ minimumFractionDigits: 2 }});
+            document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR', {{ minimumFractionDigits: 2 }});
+            document.getElementById('totalMes').textContent = 'R$ ' + totalMes.toLocaleString('pt-BR', {{ minimumFractionDigits: 2 }});
+            document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR', {{ minimumFractionDigits: 2 }});
+        }}
+
+        atualizarTotais();
+    </script>
+</body>
+</html>

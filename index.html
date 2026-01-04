@@ -86,7 +86,7 @@
     <div class="content">
       <div class="tabs" role="tablist" aria-label="Navegação principal">
         <button class="tab-btn active" onclick="switchTab('gastos', this)">📊 Meus Gastos</button>
-        <button class="tab-btn" onclick="switchTab('parcelamentos', this)">💳 Parcelamentos</button>
+        <!-- aba Parcelamentos removida conforme solicitado -->
         <button class="tab-btn" onclick="switchTab('graficos', this)">📈 Análise Anual</button>
       </div>
 
@@ -138,7 +138,7 @@
             </select>
           </div>
           <div><label>Valor (R$)</label><input type="number" id="inputVal" step="0.01" placeholder="0,00"></div>
-          <div><label>Parcelas</label><input type="number" id="inputParcelas" min="1" max="36" value="1"></div>
+          <div><label>Parcela (ex: 1/3)</label><input type="text" id="inputParcela" placeholder="1/3"></div>
         </div>
 
         <div style="margin-bottom:12px"><button onclick="adicionarGasto()">+ Adicionar Gasto</button></div>
@@ -168,25 +168,7 @@
         </div>
       </div>
 
-      <div id="parcelamentos" class="tab-content">
-        <div class="table-container">
-          <h3 style="color:var(--accent); margin-bottom:10px;">📋 Parcelas Ativas</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>Valor Total</th>
-                <th>Valor da Parcela</th>
-                <th>Total de Parcelas</th>
-                <th>Próxima em</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaParcelas">
-              <!-- preenchido dinamicamente por atualizarParcelamentos() -->
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <!-- aba Parcelamentos removida da interface -->
 
       <div id="graficos" class="tab-content">
         <div class="chart-container" id="chartWrapper">
@@ -329,16 +311,6 @@
 
     function onPeriodChange(){ filtrarLinhas(); }
 
-    /* ---------- fatura logic (fallback) ---------- */
-    function faturaPeriodFor(monthIndex,year,billingDay){
-      const start = startOfDay(new Date(year, monthIndex - 2, billingDay));
-      const endDay = billingDay - 1;
-      let end;
-      if(endDay>=1) end = endOfDay(new Date(year, monthIndex - 1, endDay));
-      else end = endOfDay(new Date(year, monthIndex - 1, 0));
-      return { start, end };
-    }
-
     /* ---------- Recorrências (fixos) ---------- */
     const RECURRING_KEY = 'recorrentes_v1';
     function loadRecurringTemplates() {
@@ -357,7 +329,6 @@
         console.error('Erro ao salvar templates recorrentes', e);
       }
     }
-    // garante template e retorna o template (novo ou existente)
     function ensureRecurringTemplate(desc, catHTML, valorTexto, dateStr) {
       const templates = loadRecurringTemplates();
       const d = parseDateText(dateStr);
@@ -426,6 +397,15 @@
     }
 
     /* ---------- filtering (period override) ---------- */
+    function faturaPeriodFor(monthIndex,year,billingDay){
+      const start = startOfDay(new Date(year, monthIndex - 2, billingDay));
+      const endDay = billingDay - 1;
+      let end;
+      if(endDay>=1) end = endOfDay(new Date(year, monthIndex - 1, endDay));
+      else end = endOfDay(new Date(year, monthIndex - 1, 0));
+      return { start, end };
+    }
+
     function filtrarLinhas(){
       const selPeriod = document.getElementById('periodSelect').value;
       const q = (document.getElementById('buscaGastos').value || '').toLowerCase().trim();
@@ -462,64 +442,6 @@
         tr.style.display = show ? '' : 'none';
       });
       atualizarTotais();
-      atualizarParcelamentos();
-    }
-
-    /* ---------- parcel management & UI ---------- */
-    function atualizarParcelamentos(){
-      const tbody = document.getElementById('tabelaParcelas');
-      tbody.innerHTML = '';
-      const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'));
-      const groups = {};
-      rows.forEach(r => {
-        const groupId = r.dataset.groupId || '';
-        const installIdx = r.dataset.installmentIndex ? parseInt(r.dataset.installmentIndex,10) : 1;
-        const totalInst = r.dataset.totalInstallments ? parseInt(r.dataset.totalInstallments,10) : 1;
-        if (!groupId || totalInst <= 1) return;
-        if (!groups[groupId]) groups[groupId] = { rows: [], totalInstallments: totalInst };
-        groups[groupId].rows.push({ row: r, idx: installIdx });
-      });
-      Object.keys(groups).forEach(gid => {
-        const g = groups[gid];
-        g.rows.sort((a,b)=>a.idx - b.idx);
-        const first = g.rows[0].row;
-        const descricao = first.querySelector('td:nth-child(2)').textContent;
-        const valores = g.rows.map(x=>{
-          let v = x.row.querySelector('td:nth-child(4)').textContent.replace('R$','').trim();
-          v = v.replace(/\./g,'').replace(',', '.');
-          return parseFloat(v) || 0;
-        });
-        const totalValue = valores.reduce((s,n)=>s+n,0);
-        const parcelaValue = valores[0] || (totalValue / g.totalInstallments);
-        let next = null;
-        for (const x of g.rows) {
-          const paid = x.row.querySelector('td:nth-child(7)').textContent.includes('☑');
-          if (!paid) {
-            const dateText = x.row.querySelector('td:nth-child(1)').textContent.trim();
-            const d = parseDateText(dateText);
-            const display = d ? `${getMonthName(d.getMonth())} (Parcela ${x.idx}/${g.totalInstallments})` : `Parcela ${x.idx}/${g.totalInstallments}`;
-            next = display;
-            break;
-          }
-        }
-        if (!next) next = 'Concluído';
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${escapeHtml(descricao)}</td>
-                        <td>R$ ${totalValue.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-                        <td>R$ ${parcelaValue.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-                        <td>${g.totalInstallments}</td>
-                        <td>${escapeHtml(next)}</td>`;
-        tbody.appendChild(tr);
-      });
-      if (Object.keys(groups).length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="5" style="color:#666; padding:12px;">Nenhum parcelamento ativo.</td>`;
-        tbody.appendChild(tr);
-      }
-    }
-    function getMonthName(m){
-      const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-      return meses[m] || '';
     }
 
     /* ---------- rest of app (add/delete/mark/totals/storage/chart) ---------- */
@@ -547,21 +469,36 @@
         cell.title = 'Marcar como pago';
         cell.setAttribute('aria-pressed', 'false');
       }
-      salvarNoStorage(); atualizarTotais(); atualizarParcelamentos();
+      salvarNoStorage(); atualizarTotais();
     }
 
     function focusAdicionar(){ const el=document.getElementById('inputData')||document.getElementById('inputDesc'); if(el) el.focus(); }
 
+    // adicionarGasto agora usa campo inputParcela (ex: "1/3") — não gera parcelas automáticas
     function adicionarGasto(){
       const data = document.getElementById('inputData').value;
       const desc = document.getElementById('inputDesc').value.trim();
       const cat = document.getElementById('inputCat').value;
       const val = document.getElementById('inputVal').value;
-      const parcelas = parseInt(document.getElementById('inputParcelas').value,10) || 1;
+      const parcelaStr = document.getElementById('inputParcela').value.trim();
       if (!data || !desc || !cat || !val) { alert('Preencha todos os campos!'); return; }
 
-      const valorTotal = parseFloat(val);
-      const valorParcela = parseFloat((valorTotal / parcelas).toFixed(2));
+      const valor = parseFloat(val);
+      // parse parcelaStr like "1/3" or empty
+      let installmentIndex = 1, totalInstallments = 1;
+      if (parcelaStr) {
+        const m = parcelaStr.split('/').map(s=>s.trim()).filter(s=>s.length>0);
+        if (m.length === 2) {
+          const a = parseInt(m[0],10), b = parseInt(m[1],10);
+          if (!isNaN(a) && !isNaN(b) && b>0 && a>=1 && a<=b) {
+            installmentIndex = a; totalInstallments = b;
+          } else {
+            alert('Formato de parcela inválido. Use por exemplo "1/3".'); return;
+          }
+        } else {
+          alert('Formato de parcela inválido. Use por exemplo "1/3".'); return;
+        }
+      }
 
       let catSpan = '';
       if (cat === 'Fixo') catSpan = `<span class="categoria-fixo">Fixo</span>`;
@@ -571,57 +508,36 @@
       else if (cat === 'Saldo') catSpan = `<span class="categoria-saldo">Saldo</span>`;
       else catSpan = `<span class="categoria-compras">${escapeHtml(cat)}</span>`;
 
-      const tipoHtml = parcelas > 1 ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
+      const tipoHtml = (totalInstallments > 1) ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
 
       const tabela = document.getElementById('tabelaGastos');
 
-      if (parcelas > 1) {
-        const groupId = 'g_' + Date.now().toString(36);
-        const baseDate = parseDateText(data);
-        if (!baseDate) { alert('Data inválida'); return; }
-        for (let i = 0; i < parcelas; i++) {
-          const instDate = addMonths(baseDate, i);
-          const instDateStr = formatDateYYYYMMDD(instDate);
-          const tr = document.createElement('tr');
-          const checkboxCell = `<td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>`;
-          tr.dataset.groupId = groupId;
-          tr.dataset.installmentIndex = (i+1).toString();
-          tr.dataset.totalInstallments = parcelas.toString();
-          tr.innerHTML = `<td data-label="Data">${instDateStr}</td>
-                          <td data-label="Descrição">${escapeHtml(desc)}</td>
-                          <td data-label="Categoria">${catSpan}</td>
-                          <td data-label="Valor">R$ ${valorParcela.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-                          <td data-label="Parcela"><span class="parcela-info">${i+1}/${parcelas}</span></td>
-                          <td data-label="Tipo">${tipoHtml}</td>
-                          ${checkboxCell}
-                          <td data-label="Status"><span class="status-pendente">Pendente</span></td>
-                          <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
-          tabela.appendChild(tr);
-        }
-      } else {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td data-label="Data">${data}</td>
-                        <td data-label="Descrição">${escapeHtml(desc)}</td>
-                        <td data-label="Categoria">${catSpan}</td>
-                        <td data-label="Valor">R$ ${valorParcela.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-                        <td data-label="Parcela"><span class="parcela-info">1/1</span></td>
-                        <td data-label="Tipo">${tipoHtml}</td>
-                        <td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>
-                        <td data-label="Status"><span class="status-pendente">Pendente</span></td>
-                        <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
-        tabela.appendChild(tr);
+      const tr = document.createElement('tr');
+      tr.dataset.installmentIndex = String(installmentIndex);
+      tr.dataset.totalInstallments = String(totalInstallments);
+      // valor exibido: se parcelado, mostrar valor total / totalInstallments? keep as user-entered value per line — interpret value as parcela value
+      // We'll treat input value as the parcela value (simpler): user should enter parcela value when parcelado, or full value for único.
+      const parcelaDisplay = `${installmentIndex}/${totalInstallments}`;
+      tr.innerHTML = `<td data-label="Data">${data}</td>
+                      <td data-label="Descrição">${escapeHtml(desc)}</td>
+                      <td data-label="Categoria">${catSpan}</td>
+                      <td data-label="Valor">R$ ${parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                      <td data-label="Parcela"><span class="parcela-info">${parcelaDisplay}</span></td>
+                      <td data-label="Tipo">${tipoHtml}</td>
+                      <td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>
+                      <td data-label="Status"><span class="status-pendente">Pendente</span></td>
+                      <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
+      tabela.appendChild(tr);
 
-        // se for Fixo, criar template e linkar essa linha ao template
-        if (cat === 'Fixo') {
-          const tpl = ensureRecurringTemplate(desc, catSpan, 'R$ ' + valorParcela.toLocaleString('pt-BR',{minimumFractionDigits:2}), data);
-          if (tpl) {
-            tr.dataset.templateId = tpl.id;
-          }
-        }
+      // if Fixo, ensure template (recorrência)
+      if (cat === 'Fixo') {
+        const valorTexto = 'R$ ' + parseFloat(valor).toLocaleString('pt-BR',{minimumFractionDigits:2});
+        const tpl = ensureRecurringTemplate(desc, catSpan, valorTexto, data);
+        if (tpl) tr.dataset.templateId = tpl.id;
       }
 
       // limpar campos
-      document.getElementById('inputData').value=''; document.getElementById('inputDesc').value=''; document.getElementById('inputCat').value=''; document.getElementById('inputVal').value=''; document.getElementById('inputParcelas').value='1';
+      document.getElementById('inputData').value=''; document.getElementById('inputDesc').value=''; document.getElementById('inputCat').value=''; document.getElementById('inputVal').value=''; document.getElementById('inputParcela').value='';
 
       salvarNoStorage();
       filtrarLinhas();
@@ -652,7 +568,6 @@
       document.getElementById('totalPago').textContent='R$ '+totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2});
       document.getElementById('totalSaldo').textContent='R$ '+saldo.toLocaleString('pt-BR',{minimumFractionDigits:2});
       atualizarGrafico(totalFixo,totalCompras,totalRecebido);
-      atualizarParcelamentos();
     }
 
     const STORAGE_KEY='meusGastos_v1';
@@ -668,7 +583,6 @@
             parcelaHTML: row.querySelector('td:nth-child(5)').innerHTML.trim(),
             tipoHTML: row.querySelector('td:nth-child(6)').innerHTML.trim(),
             pago: row.querySelector('td:nth-child(7)').textContent.includes('☑'),
-            groupId: row.dataset.groupId || '',
             installmentIndex: row.dataset.installmentIndex ? parseInt(row.dataset.installmentIndex,10) : 1,
             totalInstallments: row.dataset.totalInstallments ? parseInt(row.dataset.totalInstallments,10) : 1,
             templateId: row.dataset.templateId || ''
@@ -685,7 +599,6 @@
         const tbody=document.getElementById('tabelaGastos'); tbody.innerHTML='';
         gastos.forEach(g=>{
           const tr=document.createElement('tr');
-          if (g.groupId) tr.dataset.groupId = g.groupId;
           if (g.installmentIndex) tr.dataset.installmentIndex = String(g.installmentIndex);
           if (g.totalInstallments) tr.dataset.totalInstallments = String(g.totalInstallments);
           if (g.templateId) tr.dataset.templateId = g.templateId;

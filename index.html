@@ -250,12 +250,20 @@
             margin: 30px 0;
             border: 2px solid #f9a8d4;
             text-align: center;
+            position: relative;
         }
 
-        .chart-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 10px;
+        /* garante área visível para o canvas (evita render vazio) */
+        .chart-container canvas {
+            display: block;
+            width: 100%;
+            height: 320px;
+        }
+
+        .chart-error {
+            padding: 40px;
+            color: #7f1d1d;
+            font-weight: 600;
         }
 
         .instructions-container {
@@ -554,10 +562,10 @@
 
             <!-- TAB GRÁFICOS -->
             <div id="graficos" class="tab-content">
-                <div class="chart-container">
+                <div class="chart-container" id="chartWrapper">
                     <h2 style="color: #ec4899; margin-bottom: 20px;">Distribuição Anual de Gastos</h2>
-                    <!-- substituído o placeholder por um canvas que será desenhado com Chart.js -->
-                    <canvas id="gastosChart" width="600" height="320"></canvas>
+                    <canvas id="gastosChart"></canvas>
+                    <div id="chartError" class="chart-error" style="display:none;"></div>
                 </div>
                 <div class="summary-container">
                     <div class="summary-card">
@@ -607,7 +615,7 @@
         const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-        let gastosChart = null; // referência ao Chart.js
+        let gastosChart = null;
 
         function switchTab(tabName, btn) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -616,6 +624,34 @@
             const tabEl = document.getElementById(tabName);
             if (tabEl) tabEl.classList.add('active');
             if (btn) btn.classList.add('active');
+
+            // Se abrir a aba de gráficos, forçar resize/update (Chart.js precisa do elemento visível)
+            if (tabName === 'graficos') {
+                setTimeout(() => {
+                    const chartErrorEl = document.getElementById('chartError');
+                    // se Chart não carregou, mostra mensagem
+                    if (typeof Chart === 'undefined') {
+                        chartErrorEl.style.display = 'block';
+                        chartErrorEl.textContent = 'Biblioteca Chart.js não carregada. Verifique conexão / bloqueadores (adblock, CSP).';
+                        return;
+                    } else {
+                        chartErrorEl.style.display = 'none';
+                    }
+
+                    if (gastosChart) {
+                        try {
+                            gastosChart.resize();
+                            gastosChart.update();
+                        } catch (e) {
+                            // fallback: recria o gráfico
+                            atualizarTotais();
+                        }
+                    } else {
+                        // cria o gráfico se ainda não existir (usar valores atuais)
+                        atualizarTotais();
+                    }
+                }, 120); // pequeno delay para garantir que o tab tenha sido mostrado
+            }
         }
 
         function carregarMes() {
@@ -692,7 +728,7 @@
             rows.forEach(row => {
                 const cat = row.querySelector('td:nth-child(3)').textContent;
                 let valorText = row.querySelector('td:nth-child(4)').textContent.replace('R$ ', '').trim();
-                valorText = valorText.replace(/\./g, '').replace(',', '.'); // remove separador de milhares e ajustar decimal
+                valorText = valorText.replace(/\./g, '').replace(',', '.');
                 const valor = parseFloat(valorText) || 0;
                 const pago = row.querySelector('td:nth-child(7)').textContent.includes('☑');
 
@@ -719,6 +755,16 @@
         }
 
         function atualizarGrafico(valFixo, valCompras) {
+            const chartErrorEl = document.getElementById('chartError');
+            if (typeof Chart === 'undefined') {
+                // Chart.js não carregou
+                chartErrorEl.style.display = 'block';
+                chartErrorEl.textContent = 'Biblioteca Chart.js não carregada. Verifique sua conexão ou bloqueadores (adblock/CSP).';
+                return;
+            } else {
+                chartErrorEl.style.display = 'none';
+            }
+
             const ctx = document.getElementById('gastosChart').getContext('2d');
             const data = {
                 labels: ['Fixos', 'Compras'],
@@ -757,7 +803,7 @@
             });
         }
 
-        // initialização
+        // inicializa os totais quando DOM pronto (não força render do gráfico até a aba ser exibida)
         document.addEventListener('DOMContentLoaded', () => {
             atualizarTotais();
         });

@@ -153,11 +153,11 @@
                 <button class="tab-btn" onclick="switchTab('dicas', this)" role="tab">💡 Dicas</button>
             </div>
 
-            <!-- TOOLBAR: mês, busca, ações -->
+            <!-- TOOLBAR: fatura, busca, ações -->
             <div class="toolbar">
                 <div class="left">
-                    <label for="mesSelect" class="small" style="margin-right:6px;">Mês:</label>
-                    <select id="mesSelect" aria-label="Selecionar mês" onchange="carregarMes()">
+                    <label for="faturaSelect" class="small" style="margin-right:6px;">Fatura:</label>
+                    <select id="faturaSelect" aria-label="Selecionar fatura" onchange="carregarFatura()">
                         <option value="0">Janeiro</option>
                         <option value="1">Fevereiro</option>
                         <option value="2">Março</option>
@@ -198,7 +198,11 @@
                         <select id="inputCat">
                             <option value="">Selecione...</option>
                             <option value="Fixo">Fixo</option>
-                            <option value="Compras">Compras</option>
+                            <option value="Roupas e sapatos">Roupas e sapatos</option>
+                            <option value="Tranqueira">Tranqueira</option>
+                            <option value="Comida">Comida</option>
+                            <option value="Ratos">Ratos</option>
+                            <option value="Transporte">Transporte</option>
                         </select>
                     </div>
                     <div>

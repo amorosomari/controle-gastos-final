@@ -403,7 +403,7 @@
       else catSpan=`<span class="categoria-compras">${escapeHtml(cat)}</span>`;
       const tipo = parcelas>1?'<span class="tipo-parcelado">Parcelado</span>':'<span class="tipo-recorrente">Único</span>';
       const tr=document.createElement('tr');
-      // checkbox cell includes onclick, onkeydown, role, tabindex and initial title
+      // checkbox cell includes onclick, keyboard support and title
       const checkboxCell = `<td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>`;
       tr.innerHTML=`<td data-label="Data">${data}</td><td data-label="Descrição">${escapeHtml(desc)}</td><td data-label="Categoria">${catSpan}</td><td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td data-label="Parcela"><span class="parcela-info">1/${parcelas}</span></td><td data-label="Tipo">${tipo}</td>${checkboxCell}<td data-label="Status"><span class="status-pendente">Pendente</span></td><td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
       document.getElementById('tabelaGastos').appendChild(tr);
@@ -461,10 +461,8 @@
         const tbody=document.getElementById('tabelaGastos'); tbody.innerHTML='';
         gastos.forEach(g=>{
           const tr=document.createElement('tr');
-          // include clickable, keyboard accessible checkbox cell and title that reflects saved state
           const paid = g.pago ? '☑' : '☐';
           const title = g.pago ? 'Marcar como pendente' : 'Marcar como pago';
-          // build row with checkbox cell that has onclick/onkeydown/role/tabindex and title
           tr.innerHTML = `<td data-label="Data">${g.data}</td>
                           <td data-label="Descrição">${escapeHtml(g.descricao)}</td>
                           <td data-label="Categoria">${g.categoriaHTML}</td>
@@ -532,7 +530,7 @@
     function loadPeriods(){ try{ const raw=localStorage.getItem(PERIODS_KEY); return raw?JSON.parse(raw):[] }catch(e){console.error(e);return[]} }
     function savePeriods(arr){ localStorage.setItem(PERIODS_KEY,JSON.stringify(arr)) }
     function addPeriodToListEl(period){ const div=document.createElement('div'); div.className='period-item'; div.dataset.id=period.id; div.innerHTML=`<div><div style="font-weight:700">${escapeHtml(period.name)}</div><div class="meta">${period.start} — ${period.end}</div></div><div style="display:flex;gap:8px"><button class="btn-ghost" onclick="editPeriod('${period.id}')">Editar</button><button class="btn-ghost" onclick="deletePeriod('${period.id}')">Apagar</button></div>`; return div }
-    function populatePeriodManager(){ const list = document.getElementById('periodList'); list.innerHTML=''; const periods = loadPeriods(); if(periods.length===0){ list.innerHTML='<div style="padding:8px;color:#666'>Nenhum período salvo ainda.</div>'; return } periods.forEach(p=>list.appendChild(addPeriodToListEl(p))) }
+    function populatePeriodManager(){ const list = document.getElementById('periodList'); list.innerHTML=''; const periods = loadPeriods(); if(periods.length===0){ list.innerHTML='<div style="padding:8px;color:#666">Nenhum período salvo ainda.</div>'; return } periods.forEach(p=>list.appendChild(addPeriodToListEl(p))) }
     function openPeriodManager(){ populatePeriodManager(); document.getElementById('periodId').value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value=''; document.getElementById('periodModal').style.display='flex' }
     function closePeriodManager(){ document.getElementById('periodModal').style.display='none'; populatePeriodSelect() }
     function savePeriod(){ const idField=document.getElementById('periodId'); const name=document.getElementById('periodName').value.trim(); const start=document.getElementById('periodStart').value; const end=document.getElementById('periodEnd').value; if(!name||!start||!end){ alert('Preencha nome, início e fim do período'); return } const periods=loadPeriods(); if(idField.value){ const idx=periods.findIndex(p=>p.id===idField.value); if(idx!==-1){ periods[idx].name=name; periods[idx].start=start; periods[idx].end=end } } else { const newP={ id:'p_'+Date.now().toString(36), name, start, end }; periods.push(newP) } savePeriods(periods); populatePeriodManager(); populatePeriodSelect(); idField.value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value='' }

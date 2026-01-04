@@ -56,7 +56,7 @@
         .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(236,72,153,0.03); }
         .tab-btn:hover { color:#db2777; }
 
-        /* toolbar (mês, busca, ações) */
+        /* toolbar (fatura, busca, ações) */
         .toolbar {
             display:flex;
             gap:10px;
@@ -104,6 +104,7 @@
         .categoria-compras { background:#fcd34d; color:#78350f; padding:4px 10px; border-radius:8px; font-weight:600; }
         .categoria-transporte { background:#bfdbfe; color:#1e3a8a; padding:4px 10px; border-radius:8px; font-weight:600; }
         .categoria-ratos { background:#fde68a; color:#92400e; padding:4px 10px; border-radius:8px; font-weight:600; }
+        .categoria-saldo { background:#d1fae5; color:#065f46; padding:4px 10px; border-radius:8px; font-weight:700; }
         .parcela-info { background:#e9d5ff; padding:6px 8px; border-radius:6px; font-weight:600; color:#6b21a8; }
         .tipo-parcelado { background:#c084fc; color:white; padding:4px 8px; border-radius:6px; font-weight:600; }
         .tipo-recorrente { background:#d1d5db; color:#1f2937; padding:4px 8px; border-radius:6px; font-weight:600; }
@@ -112,10 +113,11 @@
 
         .checkbox-cell { text-align:center; font-size:1.2rem; cursor:pointer; }
 
-        .summary-container { display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:8px; }
+        .summary-container { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-top:8px; }
         .summary-card { background:linear-gradient(135deg,#fce7f3 0%, #fbcfe8 100%); padding:14px; border-radius:10px; border-left:6px solid var(--accent); box-shadow:0 8px 20px rgba(236,72,153,0.06); }
         .summary-card h3 { font-size:0.82rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
-        .summary-card .value { font-size:1.4rem; color:var(--accent); font-weight:800; }
+        .summary-card .value { font-size:1.2rem; color:var(--accent); font-weight:800; }
+        .summary-card .value.small { font-size:1rem; color:#065f46; font-weight:800; }
 
         .chart-container { background:white; padding:14px; border-radius:12px; margin:16px 0; border:1px solid #f9a8d4; text-align:center; display:flex; flex-direction:column; gap:8px; }
         .chart-container canvas { width:100%; height:auto; display:block; }
@@ -143,8 +145,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📅 Controle de Gastos Anual</h1>
-            <p>Gerencie seus gastos, parcelamentos e projeções mensais</p>
+            <h1>📅 Controle de Gastos por Fatura</h1>
+            <p>Registre seus recebimentos e gastos por fatura do cartão</p>
         </div>
 
         <div class="content">
@@ -155,11 +157,12 @@
                 <button class="tab-btn" onclick="switchTab('dicas', this)" role="tab">💡 Dicas</button>
             </div>
 
-            <!-- TOOLBAR: mês, busca, ações -->
+            <!-- TOOLBAR: fatura, busca, ações -->
             <div class="toolbar">
                 <div class="left">
-                    <label for="mesSelect" class="small" style="margin-right:6px;">Mês:</label>
-                    <select id="mesSelect" aria-label="Selecionar mês" onchange="carregarMes()">
+                    <label for="mesSelect" class="small" style="margin-right:6px;">Fatura:</label>
+                    <select id="mesSelect" aria-label="Selecionar fatura" onchange="filtrarLinhas()">
+                        <option value="all">Todas</option>
                         <option value="0">Janeiro</option>
                         <option value="1">Fevereiro</option>
                         <option value="2">Março</option>
@@ -203,6 +206,7 @@
                             <option value="Compras">Compras</option>
                             <option value="Transporte">Transporte</option>
                             <option value="Ratos">Ratos</option>
+                            <option value="Saldo">Saldo</option>
                         </select>
                     </div>
                     <div>
@@ -237,7 +241,7 @@
                         </thead>
                         <tbody id="tabelaGastos">
                             <tr>
-                                <td data-label="Data">01/01/2026</td>
+                                <td data-label="Data">2026-01-01</td>
                                 <td data-label="Descrição">Aluguel</td>
                                 <td data-label="Categoria"><span class="categoria-fixo">Fixo</span></td>
                                 <td data-label="Valor">R$ 1.500,00</td>
@@ -259,7 +263,7 @@
                                 <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
                             </tr>
                             <tr>
-                                <td data-label="Data">05/01/2026</td>
+                                <td data-label="Data">2026-01-05</td>
                                 <td data-label="Descrição">Notebook</td>
                                 <td data-label="Categoria"><span class="categoria-compras">Compras</span></td>
                                 <td data-label="Valor">R$ 1.000,00</td>
@@ -273,7 +277,7 @@
                     </table>
                 </div>
 
-                <div class="summary-container" aria-hidden="false">
+                <div class="summary-container" aria-hidden="false" id="resumos">
                     <div class="summary-card">
                         <h3>💰 Total Fixo</h3>
                         <div class="value" id="totalFixo">R$ 1.700,00</div>
@@ -283,12 +287,20 @@
                         <div class="value" id="totalCompras">R$ 1.000,00</div>
                     </div>
                     <div class="summary-card">
-                        <h3>📊 Total Mês</h3>
+                        <h3>📥 Total Recebido</h3>
+                        <div class="value" id="totalRecebido">R$ 0,00</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>📊 Total Mês (Despesas)</h3>
                         <div class="value" id="totalMes">R$ 2.700,00</div>
                     </div>
                     <div class="summary-card">
                         <h3>✅ Total Pago</h3>
                         <div class="value" id="totalPago">R$ 0,00</div>
+                    </div>
+                    <div class="summary-card">
+                        <h3>⚖️ Saldo (Recebido − Despesas)</h3>
+                        <div class="value small" id="totalSaldo">R$ 0,00</div>
                     </div>
                 </div>
             </div>
@@ -332,24 +344,6 @@
                     <canvas id="gastosChart"></canvas>
                     <div id="chartError" style="display:none; color:var(--muted); font-weight:600;"></div>
                 </div>
-
-                <div class="summary-container" style="margin-top:6px;">
-                    <div class="summary-card">
-                        <h3>💳 Gastos Fixos (Ano)</h3>
-                        <div class="value">R$ 21.840</div>
-                        <p class="small" style="color:var(--muted); margin-top:6px;">1.820/mês</p>
-                    </div>
-                    <div class="summary-card">
-                        <h3>🎁 Compras Avulsas</h3>
-                        <div class="value">R$ 530,50</div>
-                        <p class="small" style="color:var(--muted); margin-top:6px;">Parcela inicial</p>
-                    </div>
-                    <div class="summary-card">
-                        <h3>💰 Parcelamentos</h3>
-                        <div class="value">R$ 5.400</div>
-                        <p class="small" style="color:var(--muted); margin-top:6px;">Distribuído nos meses</p>
-                    </div>
-                </div>
             </div>
 
             <!-- TAB DICAS -->
@@ -368,7 +362,7 @@
         </div>
 
         <footer>
-            <p>✨ Controle de Gastos Anual - Versão Pessoal | Desenvolvido com ❤️</p>
+            <p>✨ Controle de Gastos por Fatura - Versão Pessoal | Desenvolvido com ❤️</p>
         </footer>
     </div>
 
@@ -381,6 +375,49 @@
 
         // Chart reference
         let gastosChart = null;
+
+        // --- AUX: parse datas em vários formatos ---
+        function parseDateText(text) {
+            if (!text) return null;
+            text = text.trim();
+            // YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+                const d = new Date(text);
+                return isNaN(d) ? null : d;
+            }
+            // DD/MM/YYYY
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
+                const parts = text.split('/');
+                const d = new Date(parseInt(parts[2],10), parseInt(parts[1],10)-1, parseInt(parts[0],10));
+                return isNaN(d) ? null : d;
+            }
+            // fallback
+            const d = new Date(text);
+            return isNaN(d) ? null : d;
+        }
+
+        // --- FILTRO (combina fatura + busca) ---
+        function filtrarLinhas() {
+            const sel = document.getElementById('mesSelect').value;
+            const q = (document.getElementById('buscaGastos').value || '').toLowerCase().trim();
+
+            document.querySelectorAll('#tabelaGastos tr').forEach(tr => {
+                const dateText = tr.querySelector('td:nth-child(1)').textContent.trim();
+                const desc = tr.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                let mostrarPorFatura = true;
+
+                if (sel !== 'all') {
+                    const d = parseDateText(dateText);
+                    if (!d) mostrarPorFatura = false;
+                    else mostrarPorFatura = (d.getMonth() === parseInt(sel,10));
+                }
+
+                const mostrarPorBusca = desc.includes(q);
+                tr.style.display = (mostrarPorFatura && mostrarPorBusca) ? '' : 'none';
+            });
+
+            atualizarTotais();
+        }
 
         // --- TAB SWITCH ---
         function switchTab(tabName, btn) {
@@ -409,12 +446,8 @@
             }
         }
 
-        // --- MÊS SELECTION ---
-        function carregarMes() {
-            const mesIdx = document.getElementById('mesSelect').value;
-            // para uso pessoal, apenas notificamos; você pode filtrar por mês se quiser
-            console.log('Mês selecionado:', meses[mesIdx]);
-        }
+        // --- MÊS SELECTION wrapper (deprecated) ---
+        function carregarMes() { filtrarLinhas(); }
 
         // --- MARCAR PAGO ---
         function marcarPago(cell) {
@@ -427,13 +460,12 @@
                 cell.textContent = '☐';
                 if (statusCell) statusCell.innerHTML = '<span class="status-pendente">Pendente</span>';
             }
-            atualizarTotais();
             salvarNoStorage();
+            atualizarTotais();
         }
 
         // --- ADICIONAR GASTO ---
         function focusAdicionar() {
-            // foca o primeiro input do formulário para facilitar
             const el = document.getElementById('inputData') || document.getElementById('inputDesc');
             if (el) el.focus();
         }
@@ -459,12 +491,14 @@
             else if (cat === 'Compras') catSpan = `<span class="categoria-compras">Compras</span>`;
             else if (cat === 'Transporte') catSpan = `<span class="categoria-transporte">Transporte</span>`;
             else if (cat === 'Ratos') catSpan = `<span class="categoria-ratos">Ratos</span>`;
+            else if (cat === 'Saldo') catSpan = `<span class="categoria-saldo">Saldo</span>`;
             else catSpan = `<span class="categoria-compras">${escapeHtml(cat)}</span>`;
 
             const tipo = parcelas > 1 ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
 
             const tabela = document.getElementById('tabelaGastos');
             const tr = document.createElement('tr');
+            // salvamos a data no formato do input (YYYY-MM-DD) para consistência
             tr.innerHTML = `
                 <td data-label="Data">${data}</td>
                 <td data-label="Descrição">${escapeHtml(desc)}</td>
@@ -485,25 +519,24 @@
             document.getElementById('inputVal').value = '';
             document.getElementById('inputParcelas').value = '1';
 
-            atualizarTotais();
             salvarNoStorage();
+            filtrarLinhas(); // aplica filtro atual e atualiza totais
         }
 
         // --- DELETAR GASTO ---
         function deletarGasto(btn) {
             const tr = btn.closest('tr');
             if (!tr) return;
-            // confirmação simples
             if (!confirm('Deseja realmente excluir este gasto?')) return;
             tr.remove();
-            atualizarTotais();
             salvarNoStorage();
+            filtrarLinhas();
         }
 
-        // --- ATUALIZAR TOTAIS ---
+        // --- ATUALIZAR TOTAIS (considera somente linhas visíveis após filtro) ---
         function atualizarTotais() {
-            let totalFixo = 0, totalCompras = 0, totalPago = 0;
-            const rows = document.querySelectorAll('#tabelaGastos tr');
+            let totalFixo = 0, totalCompras = 0, totalRecebido = 0, totalPago = 0;
+            const rows = Array.from(document.querySelectorAll('#tabelaGastos tr')).filter(r => r.style.display !== 'none');
 
             rows.forEach(row => {
                 const cat = row.querySelector('td:nth-child(3)').textContent;
@@ -513,24 +546,28 @@
                 const pago = row.querySelector('td:nth-child(7)').textContent.includes('☑');
 
                 if (cat.includes('Fixo')) totalFixo += valor;
-                // tratamos Compras, Transporte e Ratos como parte de "Compras" no resumo
                 else if (cat.includes('Compras') || cat.includes('Transporte') || cat.includes('Ratos')) totalCompras += valor;
+                else if (cat.includes('Saldo')) totalRecebido += valor;
 
                 if (pago) totalPago += valor;
             });
 
-            const totalMes = totalFixo + totalCompras;
+            const totalDespesas = totalFixo + totalCompras;
+            const saldo = totalRecebido - totalDespesas;
+
             document.getElementById('totalFixo').textContent = 'R$ ' + totalFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('totalMes').textContent = 'R$ ' + totalMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            document.getElementById('totalRecebido').textContent = 'R$ ' + totalRecebido.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            document.getElementById('totalMes').textContent = 'R$ ' + totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            document.getElementById('totalSaldo').textContent = 'R$ ' + saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-            atualizarGrafico(totalFixo, totalCompras);
+            atualizarGrafico(totalFixo, totalCompras, totalRecebido);
         }
 
-        // --- ESCAPAR HTML em descrições para evitar injeção simples (uso pessoal mas bom praticar) ---
+        // --- ESCAPAR HTML em descrições ---
         function escapeHtml(str) {
-            return str.replace(/[&<>"']/g, function(m){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]; });
+            return String(str).replace(/[&<>"']/g, function(m){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]; });
         }
 
         // --- STORAGE (localStorage) ---
@@ -610,16 +647,8 @@
             URL.revokeObjectURL(url);
         }
 
-        // --- BUSCA (filtro rápido por descrição) ---
-        document.addEventListener('input', (e) => {
-            if (e.target && e.target.id === 'buscaGastos') {
-                const q = e.target.value.toLowerCase();
-                document.querySelectorAll('#tabelaGastos tr').forEach(tr => {
-                    const desc = tr.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                    tr.style.display = desc.includes(q) ? '' : 'none';
-                });
-            }
-        });
+        // --- BUSCA (input) -> usa filtrarLinhas for combined logic ---
+        document.getElementById('buscaGastos').addEventListener('input', filtrarLinhas);
 
         // --- TEMA (claro/escuro) ---
         const TEMA_KEY = 'temaEscuro_v1';
@@ -632,8 +661,8 @@
             if (localStorage.getItem(TEMA_KEY) === 'true') document.body.classList.add('dark');
         }
 
-        // --- GRÁFICO (Chart.js) ---
-        function atualizarGrafico(valFixo, valCompras) {
+        // --- GRÁFICO (Chart.js) --- (agora também mostra recebido como informação adicional)
+        function atualizarGrafico(valFixo, valCompras, valRecebido) {
             const chartErrorEl = document.getElementById('chartError');
             if (typeof Chart === 'undefined') {
                 chartErrorEl.style.display = 'block';
@@ -645,11 +674,11 @@
 
             const ctx = document.getElementById('gastosChart').getContext('2d');
             const data = {
-                labels: ['Fixos','Compras'],
+                labels: ['Fixos','Compras','Recebido'],
                 datasets: [{
-                    data: [valFixo, valCompras],
-                    backgroundColor: ['#ec4899','#fcd34d'],
-                    hoverBackgroundColor: ['#db2777','#f59e0b'],
+                    data: [valFixo || 0, valCompras || 0, valRecebido || 0],
+                    backgroundColor: ['#ec4899','#fcd34d','#10b981'],
+                    hoverBackgroundColor: ['#db2777','#f59e0b','#059669'],
                     borderWidth: 0
                 }]
             };
@@ -704,16 +733,16 @@
             }
         });
 
-        // --- UTIL / INIT ---
+        // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
-            // set month select to current month by default
+            // set fatura select to current month by default
             const hoje = new Date();
             const sel = document.getElementById('mesSelect');
             if (sel) sel.value = hoje.getMonth();
 
             carregarTema();
             carregarDoStorage();
-            atualizarTotais();
+            filtrarLinhas(); // aplica filtro + atualiza totais e gráfico
         });
     </script>
 </body>

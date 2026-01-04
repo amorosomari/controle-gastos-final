@@ -1,83 +1,49 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Gastos Anual com Parcelamentos</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Controle de Gastos por Fatura</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        :root {
-            --accent:#ec4899;
-            --muted:#7f1d1d;
-        }
+        :root { --accent:#ec4899; --muted:#7f1d1d; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 50%, #f9a8d4 100%);
+            background: linear-gradient(135deg,#fce7f3 0%,#fbcfe8 50%,#f9a8d4 100%);
             min-height: 100vh;
             padding: 30px 16px;
             color: #374151;
         }
 
-        body.dark {
-            background: linear-gradient(135deg,#0b1020 0%, #071433 100%);
-            color: #e6eef8;
-        }
+        body.dark { background: linear-gradient(135deg,#0b1020 0%,#071433 100%); color: #e6eef8; }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(236,72,153,0.12);
-            overflow: hidden;
-        }
+        .container { max-width:1200px; margin:0 auto; background:white; border-radius:16px; box-shadow:0 20px 60px rgba(236,72,153,0.12); overflow:hidden; }
+        body.dark .container { background:#071033; box-shadow:none; }
 
-        body.dark .container { background: #071033; box-shadow: none; }
+        .header { background: linear-gradient(135deg,var(--accent) 0%,#db2777 100%); color:white; padding:28px 22px; text-align:center; border-bottom:4px solid #be123c; }
+        .header h1 { font-size:1.6rem; font-weight:700; margin-bottom:4px; }
+        .header p { font-size:.95rem; opacity:.95; font-weight:300; }
 
-        .header {
-            background: linear-gradient(135deg, var(--accent) 0%, #db2777 100%);
-            color: white;
-            padding: 28px 22px;
-            text-align: center;
-            border-bottom: 4px solid #be123c;
-        }
-
-        .header h1 { font-size: 1.6rem; font-weight:700; margin-bottom:4px; }
-        .header p { font-size: 0.95rem; opacity:0.95; font-weight:300; }
-
-        .content { padding: 22px; }
+        .content { padding:22px; }
 
         .tabs { display:flex; gap:10px; margin-bottom:18px; border-bottom:2px solid #f3e8f5; overflow-x:auto; padding:6px 4px; }
-        .tab-btn {
-            padding:10px 14px; background:none; border:none; cursor:pointer; color:#9ca3af; font-weight:600; border-bottom:3px solid transparent; border-radius:8px;
-        }
+        .tab-btn { padding:10px 14px; background:none; border:none; cursor:pointer; color:#9ca3af; font-weight:600; border-bottom:3px solid transparent; border-radius:8px; }
         .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(236,72,153,0.03); }
         .tab-btn:hover { color:#db2777; }
 
-        /* toolbar (fatura, busca, ações) */
-        .toolbar {
-            display:flex;
-            gap:10px;
-            align-items:center;
-            margin-bottom:18px;
-            flex-wrap:wrap;
+        /* toolbar (fatura, ano, dia, busca, ações) */
+        .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; justify-content:space-between; }
+        .toolbar .left, .toolbar .right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .toolbar label { font-size:.85rem; color:var(--muted); font-weight:600; }
+        .toolbar input[type="search"], .toolbar select, .toolbar input[type="number"] {
+            padding:8px 10px; border-radius:8px; border:1px solid #fbcfe8; background:white;
         }
-        .toolbar .left, .toolbar .right { display:flex; gap:8px; align-items:center; }
-        .toolbar input[type="search"], .toolbar select {
-            padding:8px 10px; border-radius:8px; border:1px solid #fbcfe8;
-            background:white;
-        }
-        body.dark .toolbar input[type="search"], body.dark .toolbar select { background:#0b1730; border-color: rgba(255,255,255,0.06); color:#cfe6ff; }
+        body.dark .toolbar input[type="search"], body.dark .toolbar select, body.dark .toolbar input[type="number"] { background:#0b1730; border-color: rgba(255,255,255,0.06); color:#cfe6ff; }
 
-        .toolbar button {
-            padding:10px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600;
-            background:linear-gradient(135deg,var(--accent) 0%, #db2777 100%); color:white;
-        }
-        .toolbar .secondary {
-            background:#faf5ff; color:var(--muted); border:1px solid #f3e8f5;
-        }
+        .toolbar button { padding:10px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600; background:linear-gradient(135deg,var(--accent) 0%, #db2777 100%); color:white; }
+        .toolbar .secondary { background:#faf5ff; color:var(--muted); border:1px solid #f3e8f5; }
         body.dark .toolbar .secondary { background:transparent; color:#cfe6ff; border-color: rgba(255,255,255,0.06); }
 
         .tab-content { display:none; padding-top:6px; }
@@ -86,7 +52,7 @@
         .form-group { display:grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:14px; padding:16px; background:white; border-radius:10px; border:1px solid #f9a8d4; }
         body.dark .form-group { background:linear-gradient(180deg,#061230,#061230); border-color: rgba(255,255,255,0.04); }
 
-        input, select { padding:10px; border-radius:8px; border:1px solid #fbcfe8; font-size:0.95rem; }
+        input, select { padding:10px; border-radius:8px; border:1px solid #fbcfe8; font-size:.95rem; }
         input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(236,72,153,0.06); }
         label { font-weight:600; margin-bottom:6px; display:block; color:var(--muted); }
 
@@ -95,11 +61,12 @@
 
         table { width:100%; border-collapse:collapse; min-width:0; }
         thead tr { background:linear-gradient(90deg,var(--accent) 0%, #db2777 100%); color:white; position:sticky; top:0; z-index:1; }
-        th { padding:12px 10px; text-align:left; font-weight:700; font-size:0.9rem; }
+        th { padding:12px 10px; text-align:left; font-weight:700; font-size:.9rem; }
         td { padding:12px 10px; border-bottom:1px solid #fbcfe8; font-weight:500; vertical-align:middle; }
         tbody tr:hover { background:#fff1f7; }
-        tbody tr:nth-child(even) { background: #ffffff; }
+        tbody tr:nth-child(even) { background:#ffffff; }
         body.dark td { border-color: rgba(255,255,255,0.03); }
+
         .categoria-fixo { background:#fce7f3; color:#be123c; padding:4px 10px; border-radius:8px; font-weight:600; }
         .categoria-compras { background:#fcd34d; color:#78350f; padding:4px 10px; border-radius:8px; font-weight:600; }
         .categoria-transporte { background:#bfdbfe; color:#1e3a8a; padding:4px 10px; border-radius:8px; font-weight:600; }
@@ -115,14 +82,14 @@
 
         .summary-container { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-top:8px; }
         .summary-card { background:linear-gradient(135deg,#fce7f3 0%, #fbcfe8 100%); padding:14px; border-radius:10px; border-left:6px solid var(--accent); box-shadow:0 8px 20px rgba(236,72,153,0.06); }
-        .summary-card h3 { font-size:0.82rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+        .summary-card h3 { font-size:.82rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
         .summary-card .value { font-size:1.2rem; color:var(--accent); font-weight:800; }
         .summary-card .value.small { font-size:1rem; color:#065f46; font-weight:800; }
 
         .chart-container { background:white; padding:14px; border-radius:12px; margin:16px 0; border:1px solid #f9a8d4; text-align:center; display:flex; flex-direction:column; gap:8px; }
         .chart-container canvas { width:100%; height:auto; display:block; }
 
-        footer { text-align:center; padding:18px; color:#999; font-size:0.9rem; background:#faf5ff; border-top:1px solid #f9a8d4; }
+        footer { text-align:center; padding:18px; color:#999; font-size:.9rem; background:#faf5ff; border-top:1px solid #f9a8d4; }
 
         /* responsive: table -> cards */
         @media (max-width:800px) {
@@ -135,11 +102,10 @@
             .toolbar { gap:6px; }
             .form-group { padding:12px; }
             .chart-container { padding:12px; }
-            footer { font-size:0.8rem; }
+            footer { font-size:.8rem; }
         }
 
-        /* small visual tweaks */
-        .small { font-size:0.85rem; padding:6px 8px; }
+        .small { font-size:.85rem; padding:6px 8px; }
     </style>
 </head>
 <body>
@@ -157,11 +123,11 @@
                 <button class="tab-btn" onclick="switchTab('dicas', this)" role="tab">💡 Dicas</button>
             </div>
 
-            <!-- TOOLBAR: fatura, busca, ações -->
+            <!-- TOOLBAR: fatura, ano, dia da fatura, busca, ações -->
             <div class="toolbar">
                 <div class="left">
-                    <label for="mesSelect" class="small" style="margin-right:6px;">Fatura:</label>
-                    <select id="mesSelect" aria-label="Selecionar fatura" onchange="filtrarLinhas()">
+                    <label for="mesSelect" class="small">Fatura:</label>
+                    <select id="mesSelect" aria-label="Selecionar fatura (mês)" onchange="filtrarLinhas()">
                         <option value="all">Todas</option>
                         <option value="0">Janeiro</option>
                         <option value="1">Fevereiro</option>
@@ -177,6 +143,12 @@
                         <option value="11">Dezembro</option>
                     </select>
 
+                    <label for="anoSelect" class="small">Ano:</label>
+                    <select id="anoSelect" aria-label="Selecionar ano" onchange="filtrarLinhas()"></select>
+
+                    <label for="billingDay" class="small">Dia fatura</label>
+                    <input id="billingDay" type="number" min="1" max="28" value="26" style="width:80px" onchange="filtrarLinhas()" title="Dia do mês que define início/fim da fatura">
+
                     <input id="buscaGastos" type="search" placeholder="Buscar descrição..." aria-label="Buscar gastos">
                     <button onclick="exportarCSV()" class="secondary small">Exportar CSV</button>
                 </div>
@@ -190,16 +162,9 @@
             <!-- TAB GASTOS -->
             <div id="gastos" class="tab-content active" role="tabpanel">
                 <div class="form-group" aria-label="Formulário de novo gasto">
-                    <div>
-                        <label for="inputData">Data</label>
-                        <input type="date" id="inputData">
-                    </div>
-                    <div>
-                        <label for="inputDesc">Descrição</label>
-                        <input type="text" id="inputDesc" placeholder="Ex: Aluguel">
-                    </div>
-                    <div>
-                        <label for="inputCat">Categoria</label>
+                    <div><label for="inputData">Data</label><input type="date" id="inputData"></div>
+                    <div><label for="inputDesc">Descrição</label><input type="text" id="inputDesc" placeholder="Ex: Aluguel"></div>
+                    <div><label for="inputCat">Categoria</label>
                         <select id="inputCat">
                             <option value="">Selecione...</option>
                             <option value="Fixo">Fixo</option>
@@ -209,20 +174,11 @@
                             <option value="Saldo">Saldo</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="inputVal">Valor (R$)</label>
-                        <input type="number" id="inputVal" placeholder="0,00" step="0.01">
-                    </div>
-                    <div>
-                        <label for="inputParcelas">Parcelas</label>
-                        <input type="number" id="inputParcelas" placeholder="1" min="1" max="12" value="1">
-                    </div>
+                    <div><label for="inputVal">Valor (R$)</label><input type="number" id="inputVal" placeholder="0,00" step="0.01"></div>
+                    <div><label for="inputParcelas">Parcelas</label><input type="number" id="inputParcelas" placeholder="1" min="1" max="12" value="1"></div>
                 </div>
 
-                <!-- botão adiciona aqui apenas como alternativa; principal fica na toolbar -->
-                <div style="margin-bottom:12px;">
-                    <button class="small" onclick="adicionarGasto()">+ Adicionar Gasto</button>
-                </div>
+                <div style="margin-bottom:12px;"><button class="small" onclick="adicionarGasto()">+ Adicionar Gasto</button></div>
 
                 <div class="table-container" aria-live="polite">
                     <table>
@@ -252,7 +208,7 @@
                                 <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
                             </tr>
                             <tr>
-                                <td data-label="Data">01/01/2026</td>
+                                <td data-label="Data">2026-01-01</td>
                                 <td data-label="Descrição">Água e Luz</td>
                                 <td data-label="Categoria"><span class="categoria-fixo">Fixo</span></td>
                                 <td data-label="Valor">R$ 200,00</td>
@@ -278,66 +234,34 @@
                 </div>
 
                 <div class="summary-container" aria-hidden="false" id="resumos">
-                    <div class="summary-card">
-                        <h3>💰 Total Fixo</h3>
-                        <div class="value" id="totalFixo">R$ 1.700,00</div>
-                    </div>
-                    <div class="summary-card">
-                        <h3>🛍️ Total Compras</h3>
-                        <div class="value" id="totalCompras">R$ 1.000,00</div>
-                    </div>
-                    <div class="summary-card">
-                        <h3>📥 Total Recebido</h3>
-                        <div class="value" id="totalRecebido">R$ 0,00</div>
-                    </div>
-                    <div class="summary-card">
-                        <h3>📊 Total Mês (Despesas)</h3>
-                        <div class="value" id="totalMes">R$ 2.700,00</div>
-                    </div>
-                    <div class="summary-card">
-                        <h3>✅ Total Pago</h3>
-                        <div class="value" id="totalPago">R$ 0,00</div>
-                    </div>
-                    <div class="summary-card">
-                        <h3>⚖️ Saldo (Recebido − Despesas)</h3>
-                        <div class="value small" id="totalSaldo">R$ 0,00</div>
-                    </div>
+                    <div class="summary-card"><h3>💰 Total Fixo</h3><div class="value" id="totalFixo">R$ 1.700,00</div></div>
+                    <div class="summary-card"><h3>🛍️ Total Compras</h3><div class="value" id="totalCompras">R$ 1.000,00</div></div>
+                    <div class="summary-card"><h3>📥 Total Recebido</h3><div class="value" id="totalRecebido">R$ 0,00</div></div>
+                    <div class="summary-card"><h3>📊 Total Mês (Despesas)</h3><div class="value" id="totalMes">R$ 2.700,00</div></div>
+                    <div class="summary-card"><h3>✅ Total Pago</h3><div class="value" id="totalPago">R$ 0,00</div></div>
+                    <div class="summary-card"><h3>⚖️ Saldo (Recebido − Despesas)</h3><div class="value small" id="totalSaldo">R$ 0,00</div></div>
                 </div>
             </div>
 
-            <!-- TAB PARCELAMENTOS -->
+            <!-- other tabs unchanged (parcelamentos, graficos, dicas)... -->
             <div id="parcelamentos" class="tab-content" role="tabpanel">
                 <div class="instructions-container" style="margin-bottom:12px;">
                     <h2 style="color:var(--accent); margin-bottom:8px;">💳 Sistema de Parcelamentos</h2>
                     <p style="color:var(--muted); margin-bottom:8px;">Quando você adiciona um gasto com múltiplas parcelas, o sistema cria automaticamente as demais parcelas nos próximos meses.</p>
                 </div>
-
                 <div class="table-container">
                     <h3 style="color:var(--accent); margin-bottom:10px;">📋 Parcelas Ativas</h3>
                     <table>
                         <thead>
-                            <tr>
-                                <th>Descrição</th>
-                                <th>Valor Total</th>
-                                <th>Valor da Parcela</th>
-                                <th>Total de Parcelas</th>
-                                <th>Próxima em</th>
-                            </tr>
+                            <tr><th>Descrição</th><th>Valor Total</th><th>Valor da Parcela</th><th>Total de Parcelas</th><th>Próxima em</th></tr>
                         </thead>
                         <tbody id="tabelaParcelas">
-                            <tr>
-                                <td>Notebook</td>
-                                <td>R$ 3.000,00</td>
-                                <td>R$ 1.000,00</td>
-                                <td>3</td>
-                                <td>Fevereiro (Parcela 2/3)</td>
-                            </tr>
+                            <tr><td>Notebook</td><td>R$ 3.000,00</td><td>R$ 1.000,00</td><td>3</td><td>Fevereiro (Parcela 2/3)</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- TAB GRÁFICOS -->
             <div id="graficos" class="tab-content" role="tabpanel">
                 <div class="chart-container" id="chartWrapper">
                     <h3 style="color:var(--accent); margin-bottom:6px;">Distribuição Anual de Gastos</h3>
@@ -346,7 +270,6 @@
                 </div>
             </div>
 
-            <!-- TAB DICAS -->
             <div id="dicas" class="tab-content" role="tabpanel">
                 <div class="instructions-container">
                     <h2 style="color:var(--accent); margin-bottom:8px;">💡 Como Usar Parcelamentos</h2>
@@ -361,65 +284,92 @@
 
         </div>
 
-        <footer>
-            <p>✨ Controle de Gastos por Fatura - Versão Pessoal | Desenvolvido com ❤️</p>
-        </footer>
+        <footer><p>✨ Controle de Gastos por Fatura - Versão Pessoal | Desenvolvido com ❤️</p></footer>
     </div>
 
-    <!-- Chart.js (carregado imediatamente; se preferir lazy-load posso mudar) -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        // meses
-        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        // ---------- utilitários ----------
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function(m){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]; });
+        }
 
-        // Chart reference
-        let gastosChart = null;
-
-        // --- AUX: parse datas em vários formatos ---
+        // parse datas em ISO (YYYY-MM-DD) e DD/MM/YYYY e outros
         function parseDateText(text) {
             if (!text) return null;
             text = text.trim();
-            // YYYY-MM-DD
             if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
                 const d = new Date(text);
                 return isNaN(d) ? null : d;
             }
-            // DD/MM/YYYY
             if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
                 const parts = text.split('/');
-                const d = new Date(parseInt(parts[2],10), parseInt(parts[1],10)-1, parseInt(parts[0],10));
+                const d = new Date(+parts[2], +parts[1]-1, +parts[0]);
                 return isNaN(d) ? null : d;
             }
-            // fallback
             const d = new Date(text);
             return isNaN(d) ? null : d;
         }
 
-        // --- FILTRO (combina fatura + busca) ---
+        // retorna data com horas zeradas (para comparações)
+        function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0,0,0,0); }
+        function endOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59,999); }
+
+        // ---------- fatura period logic ----------
+        // billingDay = dia do mês que define o corte (ex: 26)
+        // Selected fatura: monthIndex (0..11) and year Y
+        // Interpretation used: fatura M (monthIndex f) covers transactions from:
+        //   start = new Date(Y, f-2, billingDay)  (inclusive)
+        //   end   = new Date(Y, f-1, billingDay)  (inclusive)
+        // Example: f = 1 (Feb), Y=2026, day=26 => start = 2025-12-26, end = 2026-01-26 (matches seu exemplo).
+        function faturaPeriodFor(monthIndex, year, billingDay) {
+            // JS Date accepts month outside 0..11 and adjusts year accordingly
+            const start = startOfDay(new Date(year, monthIndex - 2, billingDay));
+            const end = endOfDay(new Date(year, monthIndex - 1, billingDay));
+            return { start, end };
+        }
+
+        // ---------- filtering (fatura + busca) ----------
         function filtrarLinhas() {
             const sel = document.getElementById('mesSelect').value;
+            const anoSel = document.getElementById('anoSelect').value;
+            const billingDay = parseInt(document.getElementById('billingDay').value, 10) || 26;
             const q = (document.getElementById('buscaGastos').value || '').toLowerCase().trim();
 
-            document.querySelectorAll('#tabelaGastos tr').forEach(tr => {
+            const rows = document.querySelectorAll('#tabelaGastos tr');
+            rows.forEach(tr => {
                 const dateText = tr.querySelector('td:nth-child(1)').textContent.trim();
                 const desc = tr.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                let mostrarPorFatura = true;
+                let show = true;
 
+                // fatura filter
                 if (sel !== 'all') {
+                    const monthIndex = parseInt(sel, 10);
+                    const year = parseInt(anoSel, 10);
+                    const { start, end } = faturaPeriodFor(monthIndex, year, billingDay);
                     const d = parseDateText(dateText);
-                    if (!d) mostrarPorFatura = false;
-                    else mostrarPorFatura = (d.getMonth() === parseInt(sel,10));
+                    if (!d) show = false;
+                    else {
+                        const dt = d;
+                        show = dt >= start && dt <= end;
+                    }
                 }
 
-                const mostrarPorBusca = desc.includes(q);
-                tr.style.display = (mostrarPorFatura && mostrarPorBusca) ? '' : 'none';
+                // search filter
+                if (show && q) {
+                    show = desc.includes(q);
+                }
+
+                tr.style.display = show ? '' : 'none';
             });
 
             atualizarTotais();
         }
 
-        // --- TAB SWITCH ---
+        // ---------- UI: TAB SWITCH ----------
+        let gastosChart = null;
         function switchTab(tabName, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -427,29 +377,23 @@
             if (el) el.classList.add('active');
             if (btn) btn.classList.add('active');
 
-            // when opening graphs, ensure chart is ready/resized
             if (tabName === 'graficos') {
                 setTimeout(() => {
                     if (typeof Chart === 'undefined') {
-                        document.getElementById('chartError').style.display = 'block';
-                        document.getElementById('chartError').textContent = 'Chart.js não carregado (bloqueado?).';
+                        const ce = document.getElementById('chartError');
+                        ce.style.display = 'block';
+                        ce.textContent = 'Chart.js não carregado (bloqueado?).';
                         return;
-                    } else {
-                        document.getElementById('chartError').style.display = 'none';
                     }
-                    if (gastosChart) {
-                        try { gastosChart.resize(); gastosChart.update(); } catch(e){ atualizarTotais(); }
-                    } else {
-                        atualizarTotais();
-                    }
+                    const ce = document.getElementById('chartError');
+                    ce.style.display = 'none';
+                    if (gastosChart) { try { gastosChart.resize(); gastosChart.update(); } catch(e) { atualizarTotais(); } }
+                    else atualizarTotais();
                 }, 120);
             }
         }
 
-        // --- MÊS SELECTION wrapper (deprecated) ---
-        function carregarMes() { filtrarLinhas(); }
-
-        // --- MARCAR PAGO ---
+        // ---------- marcar pago / adicionar / deletar ----------
         function marcarPago(cell) {
             const checkbox = cell.textContent.trim();
             const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
@@ -464,11 +408,7 @@
             atualizarTotais();
         }
 
-        // --- ADICIONAR GASTO ---
-        function focusAdicionar() {
-            const el = document.getElementById('inputData') || document.getElementById('inputDesc');
-            if (el) el.focus();
-        }
+        function focusAdicionar() { const el = document.getElementById('inputData') || document.getElementById('inputDesc'); if (el) el.focus(); }
 
         function adicionarGasto() {
             const data = document.getElementById('inputData').value;
@@ -477,15 +417,11 @@
             const val = document.getElementById('inputVal').value;
             const parcelas = parseInt(document.getElementById('inputParcelas').value) || 1;
 
-            if (!data || !desc || !cat || !val) {
-                alert('Preencha todos os campos!');
-                return;
-            }
+            if (!data || !desc || !cat || !val) { alert('Preencha todos os campos!'); return; }
 
             const valor = parseFloat(val);
             const valorParcela = (valor / parcelas).toFixed(2);
 
-            // escolher span baseado na categoria
             let catSpan = '';
             if (cat === 'Fixo') catSpan = `<span class="categoria-fixo">Fixo</span>`;
             else if (cat === 'Compras') catSpan = `<span class="categoria-compras">Compras</span>`;
@@ -498,12 +434,11 @@
 
             const tabela = document.getElementById('tabelaGastos');
             const tr = document.createElement('tr');
-            // salvamos a data no formato do input (YYYY-MM-DD) para consistência
             tr.innerHTML = `
                 <td data-label="Data">${data}</td>
                 <td data-label="Descrição">${escapeHtml(desc)}</td>
                 <td data-label="Categoria">${catSpan}</td>
-                <td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
                 <td data-label="Parcela"><span class="parcela-info">1/${parcelas}</span></td>
                 <td data-label="Tipo">${tipo}</td>
                 <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td>
@@ -512,7 +447,6 @@
             `;
             tabela.appendChild(tr);
 
-            // limpar campos
             document.getElementById('inputData').value = '';
             document.getElementById('inputDesc').value = '';
             document.getElementById('inputCat').value = '';
@@ -520,20 +454,18 @@
             document.getElementById('inputParcelas').value = '1';
 
             salvarNoStorage();
-            filtrarLinhas(); // aplica filtro atual e atualiza totais
+            filtrarLinhas();
         }
 
-        // --- DELETAR GASTO ---
         function deletarGasto(btn) {
-            const tr = btn.closest('tr');
-            if (!tr) return;
+            const tr = btn.closest('tr'); if (!tr) return;
             if (!confirm('Deseja realmente excluir este gasto?')) return;
             tr.remove();
             salvarNoStorage();
             filtrarLinhas();
         }
 
-        // --- ATUALIZAR TOTAIS (considera somente linhas visíveis após filtro) ---
+        // ---------- totais (só linhas visíveis) ----------
         function atualizarTotais() {
             let totalFixo = 0, totalCompras = 0, totalRecebido = 0, totalPago = 0;
             const rows = Array.from(document.querySelectorAll('#tabelaGastos tr')).filter(r => r.style.display !== 'none');
@@ -555,24 +487,18 @@
             const totalDespesas = totalFixo + totalCompras;
             const saldo = totalRecebido - totalDespesas;
 
-            document.getElementById('totalFixo').textContent = 'R$ ' + totalFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('totalRecebido').textContent = 'R$ ' + totalRecebido.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('totalMes').textContent = 'R$ ' + totalDespesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            document.getElementById('totalSaldo').textContent = 'R$ ' + saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            document.getElementById('totalFixo').textContent = 'R$ ' + totalFixo.toLocaleString('pt-BR',{minimumFractionDigits:2});
+            document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR',{minimumFractionDigits:2});
+            document.getElementById('totalRecebido').textContent = 'R$ ' + totalRecebido.toLocaleString('pt-BR',{minimumFractionDigits:2});
+            document.getElementById('totalMes').textContent = 'R$ ' + totalDespesas.toLocaleString('pt-BR',{minimumFractionDigits:2});
+            document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2});
+            document.getElementById('totalSaldo').textContent = 'R$ ' + saldo.toLocaleString('pt-BR',{minimumFractionDigits:2});
 
             atualizarGrafico(totalFixo, totalCompras, totalRecebido);
         }
 
-        // --- ESCAPAR HTML em descrições ---
-        function escapeHtml(str) {
-            return String(str).replace(/[&<>"']/g, function(m){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]; });
-        }
-
-        // --- STORAGE (localStorage) ---
+        // ---------- storage ----------
         const STORAGE_KEY = 'meusGastos_v1';
-
         function salvarNoStorage() {
             try {
                 const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'));
@@ -586,18 +512,14 @@
                     pago: row.querySelector('td:nth-child(7)').textContent.includes('☑')
                 }));
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
-            } catch(e) {
-                console.error('Erro ao salvar no storage', e);
-            }
+            } catch(e) { console.error('Erro ao salvar no storage', e); }
         }
-
         function carregarDoStorage() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) return;
                 const gastos = JSON.parse(raw);
-                const tbody = document.getElementById('tabelaGastos');
-                tbody.innerHTML = '';
+                const tbody = document.getElementById('tabelaGastos'); tbody.innerHTML = '';
                 gastos.forEach(g => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -613,18 +535,14 @@
                     `;
                     tbody.appendChild(tr);
                 });
-            } catch(e) {
-                console.error('Erro ao carregar do storage', e);
-            }
+            } catch(e) { console.error('Erro ao carregar do storage', e); }
         }
 
-        // --- EXPORT CSV ---
+        // ---------- export CSV ----------
         function exportarCSV() {
-            const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'))
-                .filter(tr => tr.style.display !== 'none');
+            const rows = Array.from(document.querySelectorAll('#tabelaGastos tr')).filter(tr => tr.style.display !== 'none');
             if (rows.length === 0) { alert('Não há gastos para exportar.'); return; }
-            const csv = [];
-            csv.push(['Data','Descrição','Categoria','Valor','Parcela','Tipo','Pago','Status'].join(','));
+            const csv = []; csv.push(['Data','Descrição','Categoria','Valor','Parcela','Tipo','Pago','Status'].join(','));
             rows.forEach(row => {
                 const cols = [
                     row.querySelector('td:nth-child(1)').textContent.trim(),
@@ -640,109 +558,61 @@
             });
             const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `gastos_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const a = document.createElement('a'); a.href = url;
+            a.download = `gastos_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
         }
 
-        // --- BUSCA (input) -> usa filtrarLinhas for combined logic ---
+        // ---------- search wiring ----------
         document.getElementById('buscaGastos').addEventListener('input', filtrarLinhas);
 
-        // --- TEMA (claro/escuro) ---
+        // ---------- theme ----------
         const TEMA_KEY = 'temaEscuro_v1';
         document.getElementById('toggleTema').addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            localStorage.setItem(TEMA_KEY, document.body.classList.contains('dark'));
+            document.body.classList.toggle('dark'); localStorage.setItem(TEMA_KEY, document.body.classList.contains('dark'));
         });
+        function carregarTema() { if (localStorage.getItem(TEMA_KEY) === 'true') document.body.classList.add('dark'); }
 
-        function carregarTema() {
-            if (localStorage.getItem(TEMA_KEY) === 'true') document.body.classList.add('dark');
-        }
-
-        // --- GRÁFICO (Chart.js) --- (agora também mostra recebido como informação adicional)
+        // ---------- chart ----------
         function atualizarGrafico(valFixo, valCompras, valRecebido) {
-            const chartErrorEl = document.getElementById('chartError');
-            if (typeof Chart === 'undefined') {
-                chartErrorEl.style.display = 'block';
-                chartErrorEl.textContent = 'Biblioteca Chart.js não carregada.';
-                return;
-            } else {
-                chartErrorEl.style.display = 'none';
-            }
-
+            const ce = document.getElementById('chartError');
+            if (typeof Chart === 'undefined') { ce.style.display = 'block'; ce.textContent = 'Chart.js não carregado.'; return; }
+            ce.style.display = 'none';
             const ctx = document.getElementById('gastosChart').getContext('2d');
             const data = {
                 labels: ['Fixos','Compras','Recebido'],
-                datasets: [{
-                    data: [valFixo || 0, valCompras || 0, valRecebido || 0],
-                    backgroundColor: ['#ec4899','#fcd34d','#10b981'],
-                    hoverBackgroundColor: ['#db2777','#f59e0b','#059669'],
-                    borderWidth: 0
-                }]
+                datasets: [{ data:[valFixo||0,valCompras||0,valRecebido||0], backgroundColor:['#ec4899','#fcd34d','#10b981'], hoverBackgroundColor:['#db2777','#f59e0b','#059669'], borderWidth:0 }]
             };
-
             const asp = calcularAspectRatio();
-
-            const config = {
-                type: 'doughnut',
-                data,
-                options: {
-                    responsive:true,
-                    maintainAspectRatio:true,
-                    aspectRatio:asp,
-                    plugins: {
-                        legend:{ position:'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const val = context.raw || 0;
-                                    return context.label + ': R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits:2 });
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            if (gastosChart) {
-                gastosChart.data = data;
-                gastosChart.options.aspectRatio = asp;
-                try { gastosChart.update(); } catch(e) {}
-                return;
-            }
-
+            const config = { type:'doughnut', data, options:{ responsive:true, maintainAspectRatio:true, aspectRatio:asp, plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label:function(ctx){ const val = ctx.raw||0; return ctx.label + ': R$ ' + val.toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } } } };
+            if (gastosChart) { gastosChart.data = data; gastosChart.options.aspectRatio = asp; try{ gastosChart.update(); }catch(e){} return; }
             gastosChart = new Chart(ctx, config);
         }
+        function calcularAspectRatio() { const wrapper = document.getElementById('chartWrapper'); const w = wrapper ? wrapper.clientWidth : window.innerWidth; let targetHeight = 320; if (w < 420) targetHeight = 220; else if (w < 700) targetHeight = 280; else targetHeight = 320; return w / targetHeight; }
+        window.addEventListener('resize', ()=>{ if (gastosChart) { gastosChart.options.aspectRatio = calcularAspectRatio(); try { gastosChart.resize(); gastosChart.update(); } catch(e) {} } });
 
-        function calcularAspectRatio() {
-            const wrapper = document.getElementById('chartWrapper');
-            const w = wrapper ? wrapper.clientWidth : window.innerWidth;
-            let targetHeight = 320;
-            if (w < 420) targetHeight = 220;
-            else if (w < 700) targetHeight = 280;
-            else targetHeight = 320;
-            return w / targetHeight;
+        // ---------- init: preencher anos, carregar storage e aplicar filtro ----------
+        function populateYearOptions() {
+            const sel = document.getElementById('anoSelect');
+            sel.innerHTML = '';
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            // oferecer anos current-1 .. current+2 para flexibilidade
+            for (let y = currentYear - 1; y <= currentYear + 2; y++) {
+                const opt = document.createElement('option'); opt.value = y; opt.textContent = y; sel.appendChild(opt);
+            }
+            sel.value = currentYear;
         }
 
-        window.addEventListener('resize', () => {
-            if (gastosChart) {
-                gastosChart.options.aspectRatio = calcularAspectRatio();
-                try { gastosChart.resize(); gastosChart.update(); } catch(e) {}
-            }
-        });
-
-        // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
-            // set fatura select to current month by default
+            // definir selects iniciais
+            populateYearOptions();
             const hoje = new Date();
             const sel = document.getElementById('mesSelect');
+            // por padrão manter 'current fatura' como mês atual
             if (sel) sel.value = hoje.getMonth();
-
             carregarTema();
             carregarDoStorage();
-            filtrarLinhas(); // aplica filtro + atualiza totais e gráfico
+            filtrarLinhas();
         });
     </script>
 </body>

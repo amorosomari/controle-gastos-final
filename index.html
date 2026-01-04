@@ -339,6 +339,92 @@
       return { start, end };
     }
 
+    /* ---------- Recorrências (fixos) ---------- */
+    const RECURRING_KEY = 'recorrentes_v1';
+    function loadRecurringTemplates() {
+      try {
+        const raw = localStorage.getItem(RECURRING_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.error('Erro ao ler templates recorrentes', e);
+        return [];
+      }
+    }
+    function saveRecurringTemplates(arr) {
+      try {
+        localStorage.setItem(RECURRING_KEY, JSON.stringify(arr));
+      } catch (e) {
+        console.error('Erro ao salvar templates recorrentes', e);
+      }
+    }
+    // garante template e retorna o template (novo ou existente)
+    function ensureRecurringTemplate(desc, catHTML, valorTexto, dateStr) {
+      const templates = loadRecurringTemplates();
+      const d = parseDateText(dateStr);
+      const day = d ? d.getDate() : null;
+      const key = `${desc}||${valorTexto}||${day}`;
+      let existing = templates.find(t => t.key === key);
+      if (existing) return existing;
+      const tpl = {
+        id: 'r_' + Date.now().toString(36),
+        key,
+        descricao: desc,
+        categoriaHTML: catHTML,
+        valorTexto,
+        day,
+        start: dateStr
+      };
+      templates.push(tpl);
+      saveRecurringTemplates(templates);
+      return tpl;
+    }
+    function existsEntryForTemplateInMonth(tpl, year, month) {
+      const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'));
+      return rows.some(r => {
+        if ((r.dataset.templateId || '') !== tpl.id) return false;
+        const dt = parseDateText(r.querySelector('td:nth-child(1)').textContent.trim());
+        return dt && dt.getFullYear() === year && dt.getMonth() === month;
+      });
+    }
+    function ensureRecurringEntries(start, end) {
+      if (!start || !end) return;
+      const templates = loadRecurringTemplates();
+      if (!templates || templates.length === 0) return;
+      const tbody = document.getElementById('tabelaGastos');
+      templates.forEach(tpl => {
+        const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+        const lastMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+        while (cur <= lastMonth) {
+          const year = cur.getFullYear();
+          const month = cur.getMonth();
+          let day = tpl.day || 1;
+          const lastDay = new Date(year, month + 1, 0).getDate();
+          if (day > lastDay) day = lastDay;
+          const dateStr = formatDateYYYYMMDD(new Date(year, month, day));
+          const dateObj = parseDateText(dateStr);
+          if (dateObj >= start && dateObj <= end) {
+            if (!existsEntryForTemplateInMonth(tpl, year, month)) {
+              const tr = document.createElement('tr');
+              tr.dataset.templateId = tpl.id;
+              tr.innerHTML = `
+                <td data-label="Data">${dateStr}</td>
+                <td data-label="Descrição">${escapeHtml(tpl.descricao)}</td>
+                <td data-label="Categoria">${tpl.categoriaHTML}</td>
+                <td data-label="Valor">${tpl.valorTexto}</td>
+                <td data-label="Parcela"><span class="parcela-info">1/1</span></td>
+                <td data-label="Tipo"><span class="tipo-recorrente">Recorrente</span></td>
+                <td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>
+                <td data-label="Status"><span class="status-pendente">Pendente</span></td>
+                <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
+              tbody.appendChild(tr);
+            }
+          }
+          cur.setMonth(cur.getMonth() + 1);
+        }
+      });
+      salvarNoStorage();
+    }
+
     /* ---------- filtering (period override) ---------- */
     function filtrarLinhas(){
       const selPeriod = document.getElementById('periodSelect').value;
@@ -360,6 +446,9 @@
         }
       }
 
+      // garantir entradas recorrentes (fixos) para o período antes de filtrar
+      if (useStart && useEnd) ensureRecurringEntries(useStart, useEnd);
+
       document.querySelectorAll('#tabelaGastos tr').forEach(tr=>{
         const dateText = tr.querySelector('td:nth-child(1)').textContent.trim();
         const desc = tr.querySelector('td:nth-child(2)').textContent.toLowerCase();
@@ -377,29 +466,24 @@
     }
 
     /* ---------- parcel management & UI ---------- */
-    // atualiza a tabela de parcelamentos agrupando por groupId (somente grupos com >1 parcela)
     function atualizarParcelamentos(){
       const tbody = document.getElementById('tabelaParcelas');
       tbody.innerHTML = '';
-      // coletar linhas do DOM (somente as existentes, independente de filtro) e agrupar por dataset.groupId
       const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'));
       const groups = {};
       rows.forEach(r => {
         const groupId = r.dataset.groupId || '';
         const installIdx = r.dataset.installmentIndex ? parseInt(r.dataset.installmentIndex,10) : 1;
         const totalInst = r.dataset.totalInstallments ? parseInt(r.dataset.totalInstallments,10) : 1;
-        if (!groupId || totalInst <= 1) return; // não é parcelamento multi
+        if (!groupId || totalInst <= 1) return;
         if (!groups[groupId]) groups[groupId] = { rows: [], totalInstallments: totalInst };
         groups[groupId].rows.push({ row: r, idx: installIdx });
       });
-      // para cada grupo, calcular valores
       Object.keys(groups).forEach(gid => {
         const g = groups[gid];
-        // ordenar por idx
         g.rows.sort((a,b)=>a.idx - b.idx);
         const first = g.rows[0].row;
         const descricao = first.querySelector('td:nth-child(2)').textContent;
-        // somar valores e pegar valor de parcela como soma/totalInstallments (ou do primeiro valor)
         const valores = g.rows.map(x=>{
           let v = x.row.querySelector('td:nth-child(4)').textContent.replace('R$','').trim();
           v = v.replace(/\./g,'').replace(',', '.');
@@ -407,7 +491,6 @@
         });
         const totalValue = valores.reduce((s,n)=>s+n,0);
         const parcelaValue = valores[0] || (totalValue / g.totalInstallments);
-        // encontrar próxima parcela não paga
         let next = null;
         for (const x of g.rows) {
           const paid = x.row.querySelector('td:nth-child(7)').textContent.includes('☑');
@@ -420,7 +503,6 @@
           }
         }
         if (!next) next = 'Concluído';
-        // inserir linha resumo
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${escapeHtml(descricao)}</td>
                         <td>R$ ${totalValue.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
@@ -429,14 +511,12 @@
                         <td>${escapeHtml(next)}</td>`;
         tbody.appendChild(tr);
       });
-      // se nenhum parcelamento, mostrar linha informativa
       if (Object.keys(groups).length === 0) {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td colspan="5" style="color:#666; padding:12px;">Nenhum parcelamento ativo.</td>`;
         tbody.appendChild(tr);
       }
     }
-
     function getMonthName(m){
       const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
       return meses[m] || '';
@@ -453,7 +533,6 @@
       if(tabName==='graficos'){ setTimeout(()=>{ if(typeof Chart==='undefined'){ document.getElementById('chartError').style.display='block'; document.getElementById('chartError').textContent='Chart.js não carregado'; return } document.getElementById('chartError').style.display='none'; if(gastosChart){ try{gastosChart.resize();gastosChart.update()}catch(e){atualizarTotais()} } else atualizarTotais() },120) }
     }
 
-    // Toggle paid state and update title for tooltip + aria-pressed
     function marcarPago(cell){
       const checkbox = cell.textContent.trim();
       const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
@@ -473,7 +552,6 @@
 
     function focusAdicionar(){ const el=document.getElementById('inputData')||document.getElementById('inputDesc'); if(el) el.focus(); }
 
-    // adicionarGasto agora cria parcelamento completo quando parcelas>1
     function adicionarGasto(){
       const data = document.getElementById('inputData').value;
       const desc = document.getElementById('inputDesc').value.trim();
@@ -498,13 +576,12 @@
       const tabela = document.getElementById('tabelaGastos');
 
       if (parcelas > 1) {
-        // criar groupId e N linhas com datas incrementadas por mês
         const groupId = 'g_' + Date.now().toString(36);
         const baseDate = parseDateText(data);
         if (!baseDate) { alert('Data inválida'); return; }
         for (let i = 0; i < parcelas; i++) {
           const instDate = addMonths(baseDate, i);
-          const instDateStr = formatDateYYYYMMDD(instDate); // salvar em YYYY-MM-DD
+          const instDateStr = formatDateYYYYMMDD(instDate);
           const tr = document.createElement('tr');
           const checkboxCell = `<td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>`;
           tr.dataset.groupId = groupId;
@@ -522,7 +599,6 @@
           tabela.appendChild(tr);
         }
       } else {
-        // único
         const tr = document.createElement('tr');
         tr.innerHTML = `<td data-label="Data">${data}</td>
                         <td data-label="Descrição">${escapeHtml(desc)}</td>
@@ -534,13 +610,21 @@
                         <td data-label="Status"><span class="status-pendente">Pendente</span></td>
                         <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
         tabela.appendChild(tr);
+
+        // se for Fixo, criar template e linkar essa linha ao template
+        if (cat === 'Fixo') {
+          const tpl = ensureRecurringTemplate(desc, catSpan, 'R$ ' + valorParcela.toLocaleString('pt-BR',{minimumFractionDigits:2}), data);
+          if (tpl) {
+            tr.dataset.templateId = tpl.id;
+          }
+        }
       }
 
       // limpar campos
       document.getElementById('inputData').value=''; document.getElementById('inputDesc').value=''; document.getElementById('inputCat').value=''; document.getElementById('inputVal').value=''; document.getElementById('inputParcelas').value='1';
 
       salvarNoStorage();
-      filtrarLinhas(); // aplica filtro e atualiza totais/parcelamentos
+      filtrarLinhas();
     }
 
     function deletarGasto(btn){ const tr=btn.closest('tr'); if(!tr) return; if(!confirm('Deseja realmente excluir este gasto?')) return; tr.remove(); salvarNoStorage(); filtrarLinhas() }
@@ -572,7 +656,6 @@
     }
 
     const STORAGE_KEY='meusGastos_v1';
-    // salvarNoStorage agora também persiste dataset (groupId/installmentIndex/totalInstallments)
     function salvarNoStorage(){
       try{
         const rows=Array.from(document.querySelectorAll('#tabelaGastos tr'));
@@ -587,7 +670,8 @@
             pago: row.querySelector('td:nth-child(7)').textContent.includes('☑'),
             groupId: row.dataset.groupId || '',
             installmentIndex: row.dataset.installmentIndex ? parseInt(row.dataset.installmentIndex,10) : 1,
-            totalInstallments: row.dataset.totalInstallments ? parseInt(row.dataset.totalInstallments,10) : 1
+            totalInstallments: row.dataset.totalInstallments ? parseInt(row.dataset.totalInstallments,10) : 1,
+            templateId: row.dataset.templateId || ''
           };
         });
         localStorage.setItem(STORAGE_KEY,JSON.stringify(gastos));
@@ -601,10 +685,10 @@
         const tbody=document.getElementById('tabelaGastos'); tbody.innerHTML='';
         gastos.forEach(g=>{
           const tr=document.createElement('tr');
-          // restore dataset attributes
           if (g.groupId) tr.dataset.groupId = g.groupId;
           if (g.installmentIndex) tr.dataset.installmentIndex = String(g.installmentIndex);
           if (g.totalInstallments) tr.dataset.totalInstallments = String(g.totalInstallments);
+          if (g.templateId) tr.dataset.templateId = g.templateId;
           const paid = g.pago ? '☑' : '☐';
           const title = g.pago ? 'Marcar como pendente' : 'Marcar como pago';
           tr.innerHTML = `<td data-label="Data">${g.data}</td>
@@ -669,17 +753,6 @@
     function populatePeriodSelect(){ const sel=document.getElementById('periodSelect'); const cur=sel.value; sel.innerHTML='<option value="none">Nenhum (usar Fatura)</option>'; const periods=loadPeriods(); periods.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} — ${p.start} → ${p.end}`; sel.appendChild(o) }); if(Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur; else sel.value='none' }
 
     function init(){ populateYearOptions(); populatePeriodSelect(); carregarTema(); carregarDoStorage(); const hoje=new Date(); document.getElementById('mesSelect').value=hoje.getMonth(); filtrarLinhas(); document.addEventListener('keydown',e=>{ if(e.key==='Escape') closePeriodManager() }) }
-
-    // period modal helpers referenced earlier
-    function loadPeriods(){ try{ const raw=localStorage.getItem(PERIODS_KEY); return raw?JSON.parse(raw):[] }catch(e){console.error(e);return[]} }
-    function savePeriods(arr){ localStorage.setItem(PERIODS_KEY,JSON.stringify(arr)) }
-    function addPeriodToListEl(period){ const div=document.createElement('div'); div.className='period-item'; div.dataset.id=period.id; div.innerHTML=`<div><div style="font-weight:700">${escapeHtml(period.name)}</div><div class="meta">${period.start} — ${period.end}</div></div><div style="display:flex;gap:8px"><button class="btn-ghost" onclick="editPeriod('${period.id}')">Editar</button><button class="btn-ghost" onclick="deletePeriod('${period.id}')">Apagar</button></div>`; return div }
-    function populatePeriodManager(){ const list = document.getElementById('periodList'); list.innerHTML=''; const periods = loadPeriods(); if(periods.length===0){ list.innerHTML='<div style="padding:8px;color:#666">Nenhum período salvo ainda.</div>'; return } periods.forEach(p=>list.appendChild(addPeriodToListEl(p))) }
-    function openPeriodManager(){ populatePeriodManager(); document.getElementById('periodId').value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value=''; document.getElementById('periodModal').style.display='flex' }
-    function closePeriodManager(){ document.getElementById('periodModal').style.display='none'; populatePeriodSelect() }
-    function savePeriod(){ const idField=document.getElementById('periodId'); const name=document.getElementById('periodName').value.trim(); const start=document.getElementById('periodStart').value; const end=document.getElementById('periodEnd').value; if(!name||!start||!end){ alert('Preencha nome, início e fim do período'); return } const periods=loadPeriods(); if(idField.value){ const idx=periods.findIndex(p=>p.id===idField.value); if(idx!==-1){ periods[idx].name=name; periods[idx].start=start; periods[idx].end=end } } else { const newP={ id:'p_'+Date.now().toString(36), name, start, end }; periods.push(newP) } savePeriods(periods); populatePeriodManager(); populatePeriodSelect(); idField.value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value='' }
-    function editPeriod(id){ const periods=loadPeriods(); const p=periods.find(x=>x.id===id); if(!p) return; document.getElementById('periodId').value=p.id; document.getElementById('periodName').value=p.name; document.getElementById('periodStart').value=p.start; document.getElementById('periodEnd').value=p.end; document.getElementById('periodName').focus() }
-    function deletePeriod(id){ if(!confirm('Apagar este período?')) return; let periods=loadPeriods(); periods=periods.filter(p=>p.id!==id); savePeriods(periods); populatePeriodManager(); populatePeriodSelect() }
 
     // start
     document.addEventListener('DOMContentLoaded',init);

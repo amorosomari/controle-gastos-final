@@ -1,159 +1,282 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Controle de Gastos por Fatura</title>
-  <style>
-    /* --- base (mantive o estilo anterior e adicionei melhorias) --- */
-    *{margin:0;padding:0;box-sizing:border-box}
-    :root{--accent:#ec4899;--muted:#7f1d1d}
-    body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 50%,#f9a8d4 100%);min-height:100vh;padding:30px 16px;color:#374151;line-height:1.5}
-    body.dark{background:linear-gradient(135deg,#0b1020 0%,#071433 100%);color:#e6eef8}
-    .container{max-width:1200px;margin:0 auto;background:white;border-radius:16px;box-shadow:0 20px 60px rgba(236,72,153,0.12);overflow:hidden}
-    body.dark .container{background:#071033;box-shadow:none}
-    .header{background:linear-gradient(135deg,var(--accent) 0%,#db2777 100%);color:white;padding:28px 22px;text-align:center;border-bottom:4px solid #be123c}
-    .content{padding:22px}
-    .tabs{display:flex;gap:10px;margin-bottom:18px;border-bottom:2px solid #f3e8f5;overflow-x:auto;padding:6px 4px}
-    .tab-btn{padding:10px 14px;background:none;border:none;cursor:pointer;color:#9ca3af;font-weight:600;border-bottom:3px solid transparent;border-radius:8px}
-    .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(236,72,153,0.03)}
-    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;justify-content:space-between}
-    .toolbar .left,.toolbar .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .toolbar label{font-size:.85rem;color:var(--muted);font-weight:600}
-    .toolbar input[type="search"],.toolbar select,.toolbar input[type="number"],.toolbar input[type="date"]{padding:8px 10px;border-radius:8px;border:1px solid #fbcfe8;background:white}
-    .toolbar .period-active{border-color:var(--accent)!important;box-shadow:0 0 0 3px rgba(236,72,153,0.12)}
-    .toolbar button{padding:10px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;background:linear-gradient(135deg,var(--accent) 0%,#db2777 100%);color:white}
-    .toolbar .secondary{background:#faf5ff;color:var(--muted);border:1px solid #f3e8f5}
-    .tab-content{display:none;padding-top:6px}
-    .tab-content.active{display:block}
-    
-    /* Formulário mais rápido: botão inline */
-    .form-group{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:14px;padding:16px;background:white;border-radius:10px;border:1px solid #f9a8d4}
-    .form-group:last-child button{padding:10px 16px;margin-left:auto}
-    input,select{padding:10px;border-radius:8px;border:1px solid #fbcfe8;font-size:.95rem}
-    input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(236,72,153,0.06)}
-    label{font-weight:600;margin-bottom:6px;display:block;color:var(--muted)}
-    
-    /* Resumo do filtro */
-    .filter-summary{margin-bottom:16px;padding:12px;background:#e7f3ff;border-radius:8px;border-left:4px solid var(--accent);font-weight:600}
-    
-    .table-container{background:#faf5ff;border-radius:12px;padding:18px;margin-bottom:16px;border:1px solid #f9a8d4;overflow:auto}
-    table{width:100%;border-collapse:collapse;min-width:0}
-    thead tr{background:linear-gradient(90deg,var(--accent) 0%, #db2777 100%);color:white;position:sticky;top:0;z-index:10}
-    th{padding:12px 10px;text-align:left;font-weight:700;font-size:.9rem;scope:"col"}
-    
-    /* Coluna Data sticky (fixa ao rolar horizontal) */
-    th:nth-child(1), td:nth-child(1){position:sticky;left:0;background:inherit;z-index:5}
-    th:nth-child(1){z-index:11}
-    
-    td{padding:12px 10px;border-bottom:1px solid #fbcfe8;font-weight:500;vertical-align:middle;line-height:1.4}
-    tbody tr:hover{background:#fff1f7}
-    
-    /* Categorias (mantidas) */
-    .categoria-fixo{background:#fce7f3;color:#be123c;padding:4px 10px;border-radius:8px;font-weight:600}
-    .categoria-compras{background:#fcd34d;color:#78350f;padding:4px 10px;border-radius:8px;font-weight:600}
-    .categoria-transporte{background:#bfdbfe;color:#1e3a8a;padding:4px 10px;border-radius:8px;font-weight:600}
-    .categoria-ratos{background:#fde68a;color:#92400e;padding:4px 10px;border-radius:8px;font-weight:600}
-    .categoria-saldo{background:#d1fae5;color:#065f46;padding:4px 10px;border-radius:8px;font-weight:700}
-    .parcela-info{background:#e9d5ff;padding:6px 8px;border-radius:6px;font-weight:600;color:#6b21a8}
-    .tipo-parcelado{background:#c084fc;color:white;padding:4px 8px;border-radius:6px;font-weight:600}
-    .tipo-recorrente{background:#10b981;color:white;padding:4px 8px;border-radius:6px;font-weight:600}
-    .status-pago{background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:6px;font-weight:600}
-    .status-pendente{background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:600}
-    
-    .summary-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:8px}
-    .summary-card{background:linear-gradient(135deg,#fce7f3 0%, #fbcfe8 100%);padding:14px;border-radius:10px;border-left:6px solid var(--accent);box-shadow:0 8px 20px rgba(236,72,153,0.06)}
-    .chart-container{background:white;padding:14px;border-radius:12px;margin:16px 0;border:1px solid #f9a8d4;text-align:center;display:flex;flex-direction:column;gap:8px}
-    footer{text-align:center;padding:18px;color:#999;font-size:.9rem;background:#faf5ff;border-top:1px solid #f9a8d4}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Controle de Gastos por Fatura</title>
 
-    /* Modal (mantido) */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:50}
-    .modal{background:white;padding:16px;border-radius:10px;max-width:720px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
-    .modal h3{margin-bottom:8px;color:var(--accent)}
-    .period-list{max-height:220px;overflow:auto;margin-bottom:8px;border:1px solid #eee;padding:8px;border-radius:8px}
-    .period-item{display:flex;justify-content:space-between;padding:8px;border-bottom:1px dashed #eee;align-items:center}
-    .period-item:last-child{border-bottom:none}
-    .period-item .meta{font-size:.9rem;color:#444}
-    .modal form{display:grid;grid-template-columns:1fr 1fr 160px;gap:8px}
-    .modal form input, .modal form button{padding:8px;border-radius:6px}
-    .modal .actions{margin-top:10px;display:flex;gap:8px;justify-content:flex-end}
-    .btn-ghost{background:transparent;border:1px solid #ddd;padding:8px;border-radius:6px;cursor:pointer}
-    
-    /* Checkbox acessível melhorado */
-    .checkbox-cell{padding:8px 4px;cursor:pointer}
-    .checkbox-cell:focus{box-shadow:0 0 0 4px rgba(236,72,153,0.12);border-radius:4px}
-    
-    @media (max-width:800px){
-      .modal form{grid-template-columns:1fr}
-      thead{display:none}
-      table,tbody,tr,td{display:block;width:100%}
-      tr{margin-bottom:10px;padding:12px;border-radius:10px;background:white;border:1px solid #f3e8f5}
-      td{padding:8px 6px;border-bottom:none;display:flex;justify-content:space-between;align-items:center}
-      td::before{content:attr(data-label);color:var(--muted);font-weight:700;margin-right:8px;flex:0 0 auto}
-      td > *{flex:1 1 auto;text-align:right}
-      /* Sticky não funciona bem em mobile table-block */
-      th:nth-child(1), td:nth-child(1){position:static}
-      .toolbar{gap:6px}
-      .form-group{padding:12px}
-      .chart-container{padding:12px}
-      footer{font-size:.8rem}
-    }
-  </style>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--accent:#ec4899;--muted:#7f1d1d}
+body{
+  font-family:Segoe UI,Tahoma,Verdana,sans-serif;
+  background:linear-gradient(135deg,#fce7f3,#fbcfe8,#f9a8d4);
+  min-height:100vh;padding:30px 16px;color:#374151
+}
+body.dark{
+  background:linear-gradient(135deg,#0b1020,#071433);
+  color:#e6eef8
+}
+.container{
+  max-width:1200px;margin:auto;background:white;
+  border-radius:16px;box-shadow:0 20px 60px rgba(236,72,153,.12);
+  overflow:hidden
+}
+body.dark .container{background:#071033;box-shadow:none}
+.header{
+  background:linear-gradient(135deg,var(--accent),#db2777);
+  color:white;padding:26px;text-align:center
+}
+.content{padding:22px}
+.tabs{display:flex;gap:10px;border-bottom:2px solid #f3e8f5;margin-bottom:16px}
+.tab-btn{
+  border:none;background:none;padding:10px 14px;
+  font-weight:600;cursor:pointer;color:#9ca3af
+}
+.tab-btn.active{
+  color:var(--accent);
+  border-bottom:3px solid var(--accent)
+}
+
+.toolbar{
+  display:flex;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;margin-bottom:16px
+}
+.toolbar .left,.toolbar .right{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center
+}
+.toolbar input,.toolbar select{
+  padding:8px;border-radius:8px;border:1px solid #fbcfe8
+}
+button{
+  padding:10px 12px;border-radius:8px;border:none;
+  background:linear-gradient(135deg,var(--accent),#db2777);
+  color:white;font-weight:600;cursor:pointer
+}
+.secondary{
+  background:#faf5ff;color:var(--muted);
+  border:1px solid #f3e8f5
+}
+.small{padding:6px 10px;font-size:.85rem}
+
+.form-group{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:12px;margin-bottom:10px
+}
+label{font-weight:600;color:var(--muted);margin-bottom:4px;display:block}
+input,select{
+  padding:10px;border-radius:8px;border:1px solid #fbcfe8
+}
+
+.table-container{
+  background:#faf5ff;border-radius:12px;
+  padding:16px;border:1px solid #f9a8d4
+}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;text-align:left}
+thead{background:linear-gradient(90deg,var(--accent),#db2777);color:white}
+tbody tr:hover{background:#fff1f7;cursor:pointer}
+
+.checkbox-cell{font-size:18px;text-align:center}
+
+.summary-container{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:14px;margin-bottom:16px
+}
+.summary-card{
+  background:#fce7f3;padding:14px;border-radius:10px;
+  border-left:6px solid var(--accent)
+}
+
+.flash{animation:flashBg .6s}
+@keyframes flashBg{from{background:#fdf2f8}to{background:white}}
+
+footer{
+  text-align:center;padding:16px;font-size:.85rem;
+  background:#faf5ff;border-top:1px solid #f9a8d4
+}
+</style>
 </head>
+
 <body>
-  <div class="container">
-    <div class="header"><h1>📅 Controle de Gastos por Fatura</h1><p>Registre seus recebimentos e gastos por fatura do cartão</p></div>
-    <div class="content">
-      <div class="tabs" role="tablist" aria-label="Navegação principal">
-        <button class="tab-btn active" onclick="switchTab('gastos', this)">📊 Meus Gastos</button>
-        <button class="tab-btn" onclick="switchTab('graficos', this)">📈 Análise Anual</button>
+<div class="container">
+  <div class="header">
+    <h1>📅 Controle de Gastos</h1>
+    <p>Registro simples por fatura</p>
+  </div>
+
+  <div class="content">
+
+    <div class="tabs">
+      <button class="tab-btn active">📊 Gastos</button>
+    </div>
+
+    <!-- FORM -->
+    <div class="form-group">
+      <div>
+        <label>Data</label>
+        <input type="date" id="inputData">
       </div>
 
-      <div class="toolbar">
-        <div class="left">
-          <label>Período:</label>
-          <select id="periodSelect" onchange="onPeriodChange()">
-            <option value="none">Nenhum (usar Fatura)</option>
-          </select>
-          <button class="secondary small" onclick="openPeriodManager()">Gerenciar Períodos</button>
-
-          <label>Fatura:</label>
-          <select id="mesSelect" onchange="filtrarLinhas()">
-            <option value="all">Todas</option>
-            <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
-            <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
-            <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
-            <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
-          </select>
-
-          <label>Ano:</label>
-          <select id="anoSelect" onchange="filtrarLinhas()"></select>
-
-          <label>Dia fatura</label>
-          <input id="billingDay" type="number" min="1" max="31" value="26" style="width:80px" onchange="filtrarLinhas()">
-
-          <input id="buscaGastos" type="search" placeholder="Buscar descrição..." oninput="filtrarLinhas()">
-          <button class="secondary small" onclick="exportarCSV()">Exportar CSV</button>
-        </div>
-
-        <div class="right">
-          <button id="toggleTema" title="Alternar tema">🌙</button>
-          <button onclick="focusAdicionar()" class="small">+ Adicionar</button>
-        </div>
+      <div>
+        <label>Descrição</label>
+        <input type="text" id="inputDesc">
       </div>
 
-      <div id="gastos" class="tab-content active">
-        <!-- Resumo do filtro -->
-        <div class="filter-summary" id="filterSummary" style="display:none">
-          Filtro ativo: <span id="filterText"></span> (<span id="filterCount">0</span> lançamentos)
-        </div>
+      <div>
+        <label>Categoria</label>
+        <select id="inputCat">
+          <option value="">Selecione</option>
+          <optgroup label="Despesas">
+            <option>Fixo</option>
+            <option>Compras</option>
+            <option>Transporte</option>
+            <option>Ratos</option>
+          </optgroup>
+          <optgroup label="Entradas">
+            <option>Saldo</option>
+          </optgroup>
+        </select>
+      </div>
 
-        <!-- Formulário adaptado -->
-        <div class="form-group">
-          <div><label for="inputData">Data</label><input type="date" id="inputData" autofocus></div>
-          <div><label for="inputDesc">Descrição</label><input type="text" id="inputDesc" placeholder="Ex: Aluguel"></div>
-          <div><label for="inputCat">Categoria</label>
-            <select id="inputCat">
-              <option value="">Selecione...</option>
-              <option value="Fixo">Fixo</option>
-             
+      <div>
+        <label>Valor (R$)</label>
+        <input type="number" id="inputVal" step="0.01">
+      </div>
+
+      <div id="advancedFields" style="display:none">
+        <label>Parcela</label>
+        <input type="text" id="inputParcela" placeholder="1/3">
+      </div>
+    </div>
+
+    <button onclick="adicionarGasto()">+ Adicionar</button>
+    <button class="secondary small" onclick="toggleAdvanced()">⚙️ Avançado</button>
+
+    <!-- RESUMO -->
+    <div class="summary-container">
+      <div class="summary-card"><strong>Total Fixo</strong><div id="totalFixo">R$ 0,00</div></div>
+      <div class="summary-card"><strong>Total Compras</strong><div id="totalCompras">R$ 0,00</div></div>
+      <div class="summary-card"><strong>Recebido</strong><div id="totalRecebido">R$ 0,00</div></div>
+      <div class="summary-card"><strong>Saldo</strong><div id="totalSaldo">R$ 0,00</div></div>
+    </div>
+
+    <!-- TABELA -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th><th>Descrição</th><th>Categoria</th>
+            <th>Valor</th><th>Pago</th><th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaGastos"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <footer>✨ Versão pessoal</footer>
+</div>
+
+<script>
+const STORAGE_KEY='gastos_v2';
+
+function toggleAdvanced(){
+  const el=document.getElementById('advancedFields');
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function adicionarGasto(){
+  const data=inputData.value;
+  const desc=inputDesc.value;
+  const cat=inputCat.value;
+  const val=parseFloat(inputVal.value||0);
+
+  if(!data||!desc||!cat||!val){alert('Preencha os campos');return;}
+
+  const tr=document.createElement('tr');
+  tr.onclick=()=>togglePagoRow(tr);
+  tr.innerHTML=`
+    <td>${data}</td>
+    <td>${desc}</td>
+    <td>${cat}</td>
+    <td>R$ ${val.toFixed(2)}</td>
+    <td class="checkbox-cell">☐</td>
+    <td><button onclick="event.stopPropagation();deletar(this)">✕</button></td>
+  `;
+  tr.classList.add('flash');
+  tabelaGastos.appendChild(tr);
+  setTimeout(()=>tr.classList.remove('flash'),600);
+
+  salvar();
+  atualizarTotais();
+}
+
+function togglePagoRow(tr){
+  const c=tr.querySelector('.checkbox-cell');
+  c.textContent=c.textContent==='☐'?'☑':'☐';
+  salvar(); atualizarTotais();
+}
+
+function deletar(btn){
+  btn.closest('tr').remove();
+  salvar(); atualizarTotais();
+}
+
+function salvar(){
+  const rows=[...tabelaGastos.children].map(r=>({
+    data:r.children[0].textContent,
+    desc:r.children[1].textContent,
+    cat:r.children[2].textContent,
+    val:r.children[3].textContent,
+    pago:r.children[4].textContent==='☑'
+  }));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(rows));
+}
+
+function carregar(){
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(!raw)return;
+  JSON.parse(raw).forEach(g=>{
+    const tr=document.createElement('tr');
+    tr.onclick=()=>togglePagoRow(tr);
+    tr.innerHTML=`
+      <td>${g.data}</td>
+      <td>${g.desc}</td>
+      <td>${g.cat}</td>
+      <td>${g.val}</td>
+      <td class="checkbox-cell">${g.pago?'☑':'☐'}</td>
+      <td><button onclick="event.stopPropagation();deletar(this)">✕</button></td>
+    `;
+    tabelaGastos.appendChild(tr);
+  });
+  atualizarTotais();
+}
+
+function atualizarTotais(){
+  let fixo=0,compras=0,receb=0;
+  [...tabelaGastos.children].forEach(r=>{
+    const cat=r.children[2].textContent;
+    const v=parseFloat(r.children[3].textContent.replace('R$',''));
+    if(cat==='Saldo')receb+=v;
+    else if(cat==='Fixo')fixo+=v;
+    else compras+=v;
+  });
+  totalFixo.textContent=`R$ ${fixo.toFixed(2)}`;
+  totalCompras.textContent=`R$ ${compras.toFixed(2)}`;
+  totalRecebido.textContent=`R$ ${receb.toFixed(2)}`;
+  totalSaldo.textContent=`R$ ${(receb-(fixo+compras)).toFixed(2)}`;
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='Enter')adicionarGasto();
+});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  inputData.value=new Date().toISOString().slice(0,10);
+  carregar();
+});
+</script>
+</body>
+</html>

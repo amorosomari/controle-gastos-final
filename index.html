@@ -125,37 +125,20 @@
 
       <div id="gastos" class="tab-content active">
         <div class="form-group">
-         <div><label>Data</label><input type="date" id="inputData"></div>
-
-<div><label>Descrição</label>
-  <input type="text" id="inputDesc" placeholder="Ex: Aluguel">
-</div>
-
-<div><label>Categoria</label>
-  <select id="inputCat">
-    <option value="">Selecione...</option>
-    <optgroup label="Despesas">
-      <option value="Apartamento">Apartamento</option>
-      <option value="Outras Compras">Outras Compras</option>
-      <option value="Transporte">Transporte</option>
-      <option value="Ratos">Ratos</option>
-      <option value="Streaming">Streaming</option>
-    </optgroup>
-    <optgroup label="Entradas">
-      <option value="Saldo">Recebimento</option>
-    </optgroup>
-  </select>
-</div>
-
-<div><label>Valor (R$)</label>
-  <input type="number" id="inputVal" step="0.01">
-</div>
-
-<!-- AVANÇADO -->
-<div id="advancedFields" style="display:none">
-  <label>Parcela (ex: 1/3)</label>
-  <input type="text" id="inputParcela" placeholder="1/3">
-</div>
+          <div><label>Data</label><input type="date" id="inputData"></div>
+          <div><label>Descrição</label><input type="text" id="inputDesc" placeholder="Ex: Aluguel"></div>
+          <div><label>Categoria</label>
+            <select id="inputCat">
+              <option value="">Selecione...</option>
+              <option value="Fixo">Fixo</option>
+              <option value="Compras">Compras</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Ratos">Ratos</option>
+              <option value="Saldo">Saldo</option>
+            </select>
+          </div>
+          <div><label>Valor (R$)</label><input type="number" id="inputVal" step="0.01" placeholder="0,00"></div>
+          <div><label>Parcela (ex: 1/3)</label><input type="text" id="inputParcela" placeholder="1/3"></div>
         </div>
 
         <div style="margin-bottom:12px"><button onclick="adicionarGasto()">+ Adicionar Gasto</button></div>

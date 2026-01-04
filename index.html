@@ -33,7 +33,7 @@
         .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(236,72,153,0.03); }
         .tab-btn:hover { color:#db2777; }
 
-        /* toolbar (fatura, ano, dia, busca, ações) */
+        /* toolbar (fatura, ano, dia da fatura, busca, ações) */
         .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; justify-content:space-between; }
         .toolbar .left, .toolbar .right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
         .toolbar label { font-size:.85rem; color:var(--muted); font-weight:600; }
@@ -296,42 +296,40 @@
             return String(str).replace(/[&<>"']/g, function(m){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]; });
         }
 
-        // parse datas em ISO (YYYY-MM-DD) e DD/MM/YYYY e outros
         function parseDateText(text) {
             if (!text) return null;
             text = text.trim();
-            if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-                const d = new Date(text);
-                return isNaN(d) ? null : d;
-            }
+            if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return new Date(text);
             if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
-                const parts = text.split('/');
-                const d = new Date(+parts[2], +parts[1]-1, +parts[0]);
-                return isNaN(d) ? null : d;
+                const p = text.split('/');
+                return new Date(+p[2], +p[1]-1, +p[0]);
             }
             const d = new Date(text);
             return isNaN(d) ? null : d;
         }
-
-        // retorna data com horas zeradas (para comparações)
         function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0,0,0,0); }
         function endOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59,999); }
 
-        // ---------- fatura period logic ----------
-        // billingDay = dia do mês que define o corte (ex: 26)
-        // Selected fatura: monthIndex (0..11) and year Y
-        // Interpretation used: fatura M (monthIndex f) covers transactions from:
-        //   start = new Date(Y, f-2, billingDay)  (inclusive)
-        //   end   = new Date(Y, f-1, billingDay)  (inclusive)
-        // Example: f = 1 (Feb), Y=2026, day=26 => start = 2025-12-26, end = 2026-01-26 (matches seu exemplo).
+        // ---------- nova regra de período da fatura ----------
+        // Início: dia (billingDay) do mês dois meses antes da fatura (inclusive)
+        // Término: dia (billingDay - 1) do mês anterior à fatura (inclusive)
+        // Exemplo: fatura Fevereiro 2026 (monthIndex = 1), billingDay = 26
+        //   start = 2025-12-26 00:00:00
+        //   end   = 2026-01-25 23:59:59.999
         function faturaPeriodFor(monthIndex, year, billingDay) {
-            // JS Date accepts month outside 0..11 and adjusts year accordingly
             const start = startOfDay(new Date(year, monthIndex - 2, billingDay));
-            const end = endOfDay(new Date(year, monthIndex - 1, billingDay));
+            let end;
+            const endDay = billingDay - 1;
+            if (endDay >= 1) {
+                end = endOfDay(new Date(year, monthIndex - 1, endDay));
+            } else {
+                // caso raro: billingDay === 1 -> término será o último dia do mês anterior
+                end = endOfDay(new Date(year, monthIndex - 1, 0));
+            }
             return { start, end };
         }
 
-        // ---------- filtering (fatura + busca) ----------
+        // ---------- filtrar usando o período ----------
         function filtrarLinhas() {
             const sel = document.getElementById('mesSelect').value;
             const anoSel = document.getElementById('anoSelect').value;
@@ -344,56 +342,41 @@
                 const desc = tr.querySelector('td:nth-child(2)').textContent.toLowerCase();
                 let show = true;
 
-                // fatura filter
                 if (sel !== 'all') {
                     const monthIndex = parseInt(sel, 10);
                     const year = parseInt(anoSel, 10);
                     const { start, end } = faturaPeriodFor(monthIndex, year, billingDay);
                     const d = parseDateText(dateText);
                     if (!d) show = false;
-                    else {
-                        const dt = d;
-                        show = dt >= start && dt <= end;
-                    }
+                    else show = d >= start && d <= end;
                 }
 
-                // search filter
-                if (show && q) {
-                    show = desc.includes(q);
-                }
-
+                if (show && q) show = desc.includes(q);
                 tr.style.display = show ? '' : 'none';
             });
 
             atualizarTotais();
         }
 
-        // ---------- UI: TAB SWITCH ----------
+        // ---------- Resto do app (marca pago, adicionar, deletar, totais, storage, gráfico) ----------
         let gastosChart = null;
+
         function switchTab(tabName, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            const el = document.getElementById(tabName);
-            if (el) el.classList.add('active');
+            const el = document.getElementById(tabName); if (el) el.classList.add('active');
             if (btn) btn.classList.add('active');
-
             if (tabName === 'graficos') {
                 setTimeout(() => {
                     if (typeof Chart === 'undefined') {
-                        const ce = document.getElementById('chartError');
-                        ce.style.display = 'block';
-                        ce.textContent = 'Chart.js não carregado (bloqueado?).';
-                        return;
+                        const ce = document.getElementById('chartError'); ce.style.display = 'block'; ce.textContent = 'Chart.js não carregado (bloqueado?).'; return;
                     }
-                    const ce = document.getElementById('chartError');
-                    ce.style.display = 'none';
-                    if (gastosChart) { try { gastosChart.resize(); gastosChart.update(); } catch(e) { atualizarTotais(); } }
-                    else atualizarTotais();
+                    const ce = document.getElementById('chartError'); ce.style.display = 'none';
+                    if (gastosChart) { try { gastosChart.resize(); gastosChart.update(); } catch(e) { atualizarTotais(); } } else atualizarTotais();
                 }, 120);
             }
         }
 
-        // ---------- marcar pago / adicionar / deletar ----------
         function marcarPago(cell) {
             const checkbox = cell.textContent.trim();
             const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
@@ -404,8 +387,7 @@
                 cell.textContent = '☐';
                 if (statusCell) statusCell.innerHTML = '<span class="status-pendente">Pendente</span>';
             }
-            salvarNoStorage();
-            atualizarTotais();
+            salvarNoStorage(); atualizarTotais();
         }
 
         function focusAdicionar() { const el = document.getElementById('inputData') || document.getElementById('inputDesc'); if (el) el.focus(); }
@@ -416,12 +398,10 @@
             const cat = document.getElementById('inputCat').value;
             const val = document.getElementById('inputVal').value;
             const parcelas = parseInt(document.getElementById('inputParcelas').value) || 1;
-
             if (!data || !desc || !cat || !val) { alert('Preencha todos os campos!'); return; }
 
             const valor = parseFloat(val);
             const valorParcela = (valor / parcelas).toFixed(2);
-
             let catSpan = '';
             if (cat === 'Fixo') catSpan = `<span class="categoria-fixo">Fixo</span>`;
             else if (cat === 'Compras') catSpan = `<span class="categoria-compras">Compras</span>`;
@@ -431,7 +411,6 @@
             else catSpan = `<span class="categoria-compras">${escapeHtml(cat)}</span>`;
 
             const tipo = parcelas > 1 ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
-
             const tabela = document.getElementById('tabelaGastos');
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -453,51 +432,36 @@
             document.getElementById('inputVal').value = '';
             document.getElementById('inputParcelas').value = '1';
 
-            salvarNoStorage();
-            filtrarLinhas();
+            salvarNoStorage(); filtrarLinhas();
         }
 
-        function deletarGasto(btn) {
-            const tr = btn.closest('tr'); if (!tr) return;
-            if (!confirm('Deseja realmente excluir este gasto?')) return;
-            tr.remove();
-            salvarNoStorage();
-            filtrarLinhas();
-        }
+        function deletarGasto(btn) { const tr = btn.closest('tr'); if (!tr) return; if (!confirm('Deseja realmente excluir este gasto?')) return; tr.remove(); salvarNoStorage(); filtrarLinhas(); }
 
-        // ---------- totais (só linhas visíveis) ----------
         function atualizarTotais() {
             let totalFixo = 0, totalCompras = 0, totalRecebido = 0, totalPago = 0;
             const rows = Array.from(document.querySelectorAll('#tabelaGastos tr')).filter(r => r.style.display !== 'none');
-
             rows.forEach(row => {
                 const cat = row.querySelector('td:nth-child(3)').textContent;
                 let valorText = row.querySelector('td:nth-child(4)').textContent.replace('R$','').trim();
                 valorText = valorText.replace(/\./g,'').replace(',', '.');
                 const valor = parseFloat(valorText) || 0;
                 const pago = row.querySelector('td:nth-child(7)').textContent.includes('☑');
-
                 if (cat.includes('Fixo')) totalFixo += valor;
                 else if (cat.includes('Compras') || cat.includes('Transporte') || cat.includes('Ratos')) totalCompras += valor;
                 else if (cat.includes('Saldo')) totalRecebido += valor;
-
                 if (pago) totalPago += valor;
             });
-
             const totalDespesas = totalFixo + totalCompras;
             const saldo = totalRecebido - totalDespesas;
-
             document.getElementById('totalFixo').textContent = 'R$ ' + totalFixo.toLocaleString('pt-BR',{minimumFractionDigits:2});
             document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR',{minimumFractionDigits:2});
             document.getElementById('totalRecebido').textContent = 'R$ ' + totalRecebido.toLocaleString('pt-BR',{minimumFractionDigits:2});
             document.getElementById('totalMes').textContent = 'R$ ' + totalDespesas.toLocaleString('pt-BR',{minimumFractionDigits:2});
             document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2});
             document.getElementById('totalSaldo').textContent = 'R$ ' + saldo.toLocaleString('pt-BR',{minimumFractionDigits:2});
-
             atualizarGrafico(totalFixo, totalCompras, totalRecebido);
         }
 
-        // ---------- storage ----------
         const STORAGE_KEY = 'meusGastos_v1';
         function salvarNoStorage() {
             try {
@@ -538,7 +502,6 @@
             } catch(e) { console.error('Erro ao carregar do storage', e); }
         }
 
-        // ---------- export CSV ----------
         function exportarCSV() {
             const rows = Array.from(document.querySelectorAll('#tabelaGastos tr')).filter(tr => tr.style.display !== 'none');
             if (rows.length === 0) { alert('Não há gastos para exportar.'); return; }
@@ -562,26 +525,19 @@
             a.download = `gastos_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
         }
 
-        // ---------- search wiring ----------
         document.getElementById('buscaGastos').addEventListener('input', filtrarLinhas);
 
-        // ---------- theme ----------
         const TEMA_KEY = 'temaEscuro_v1';
-        document.getElementById('toggleTema').addEventListener('click', () => {
-            document.body.classList.toggle('dark'); localStorage.setItem(TEMA_KEY, document.body.classList.contains('dark'));
-        });
+        document.getElementById('toggleTema').addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem(TEMA_KEY, document.body.classList.contains('dark')); });
         function carregarTema() { if (localStorage.getItem(TEMA_KEY) === 'true') document.body.classList.add('dark'); }
 
-        // ---------- chart ----------
+        // chart
         function atualizarGrafico(valFixo, valCompras, valRecebido) {
             const ce = document.getElementById('chartError');
             if (typeof Chart === 'undefined') { ce.style.display = 'block'; ce.textContent = 'Chart.js não carregado.'; return; }
             ce.style.display = 'none';
             const ctx = document.getElementById('gastosChart').getContext('2d');
-            const data = {
-                labels: ['Fixos','Compras','Recebido'],
-                datasets: [{ data:[valFixo||0,valCompras||0,valRecebido||0], backgroundColor:['#ec4899','#fcd34d','#10b981'], hoverBackgroundColor:['#db2777','#f59e0b','#059669'], borderWidth:0 }]
-            };
+            const data = { labels:['Fixos','Compras','Recebido'], datasets:[{ data:[valFixo||0,valCompras||0,valRecebido||0], backgroundColor:['#ec4899','#fcd34d','#10b981'], hoverBackgroundColor:['#db2777','#f59e0b','#059669'], borderWidth:0 }] };
             const asp = calcularAspectRatio();
             const config = { type:'doughnut', data, options:{ responsive:true, maintainAspectRatio:true, aspectRatio:asp, plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label:function(ctx){ const val = ctx.raw||0; return ctx.label + ': R$ ' + val.toLocaleString('pt-BR',{minimumFractionDigits:2}); } } } } } };
             if (gastosChart) { gastosChart.data = data; gastosChart.options.aspectRatio = asp; try{ gastosChart.update(); }catch(e){} return; }
@@ -590,29 +546,18 @@
         function calcularAspectRatio() { const wrapper = document.getElementById('chartWrapper'); const w = wrapper ? wrapper.clientWidth : window.innerWidth; let targetHeight = 320; if (w < 420) targetHeight = 220; else if (w < 700) targetHeight = 280; else targetHeight = 320; return w / targetHeight; }
         window.addEventListener('resize', ()=>{ if (gastosChart) { gastosChart.options.aspectRatio = calcularAspectRatio(); try { gastosChart.resize(); gastosChart.update(); } catch(e) {} } });
 
-        // ---------- init: preencher anos, carregar storage e aplicar filtro ----------
+        // init: preencher anos, carregar storage e aplicar filtro
         function populateYearOptions() {
-            const sel = document.getElementById('anoSelect');
-            sel.innerHTML = '';
-            const today = new Date();
-            const currentYear = today.getFullYear();
-            // oferecer anos current-1 .. current+2 para flexibilidade
-            for (let y = currentYear - 1; y <= currentYear + 2; y++) {
-                const opt = document.createElement('option'); opt.value = y; opt.textContent = y; sel.appendChild(opt);
-            }
+            const sel = document.getElementById('anoSelect'); sel.innerHTML = '';
+            const today = new Date(); const currentYear = today.getFullYear();
+            for (let y = currentYear - 1; y <= currentYear + 2; y++) { const opt = document.createElement('option'); opt.value = y; opt.textContent = y; sel.appendChild(opt); }
             sel.value = currentYear;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // definir selects iniciais
             populateYearOptions();
-            const hoje = new Date();
-            const sel = document.getElementById('mesSelect');
-            // por padrão manter 'current fatura' como mês atual
-            if (sel) sel.value = hoje.getMonth();
-            carregarTema();
-            carregarDoStorage();
-            filtrarLinhas();
+            const hoje = new Date(); const sel = document.getElementById('mesSelect'); if (sel) sel.value = hoje.getMonth();
+            carregarTema(); carregarDoStorage(); filtrarLinhas();
         });
     </script>
 </body>

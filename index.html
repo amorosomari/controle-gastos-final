@@ -59,7 +59,21 @@
     .modal form input, .modal form button{padding:8px;border-radius:6px}
     .modal .actions{margin-top:10px;display:flex;gap:8px;justify-content:flex-end}
     .btn-ghost{background:transparent;border:1px solid #ddd;padding:8px;border-radius:6px;cursor:pointer}
-    @media (max-width:800px){.modal form{grid-template-columns:1fr;}}
+    @media (max-width:800px){.modal form{grid-template-columns:1fr}}
+    @media (max-width:800px){
+      thead{display:none}
+      table,tbody,tr,td{display:block;width:100%}
+      tr{margin-bottom:10px;padding:12px;border-radius:10px;background:white;border:1px solid #f3e8f5}
+      td{padding:8px 6px;border-bottom:none;display:flex;justify-content:space-between;align-items:center}
+      td::before{content: attr(data-label);color:var(--muted);font-weight:700;margin-right:8px;flex:0 0 auto}
+      td > *{flex:1 1 auto;text-align:right}
+      .toolbar{gap:6px}
+      .form-group{padding:12px}
+      .chart-container{padding:12px}
+      footer{font-size:.8rem}
+    }
+
+    .small{font-size:.85rem;padding:6px 8px}
   </style>
 </head>
 <body>
@@ -70,7 +84,6 @@
         <button class="tab-btn active" onclick="switchTab('gastos', this)">📊 Meus Gastos</button>
         <button class="tab-btn" onclick="switchTab('parcelamentos', this)">💳 Parcelamentos</button>
         <button class="tab-btn" onclick="switchTab('graficos', this)">📈 Análise Anual</button>
-        <button class="tab-btn" onclick="switchTab('dicas', this)">💡 Dicas</button>
       </div>
 
       <div class="toolbar">
@@ -150,13 +163,19 @@
         </div>
       </div>
 
-      <!-- other tabs (kept minimal for brevity) -->
       <div id="parcelamentos" class="tab-content"><div class="table-container"><p style="color:var(--muted)">Parcelamentos (resumo)</p></div></div>
-      <div id="graficos" class="tab-content"><div class="chart-container"><canvas id="gastosChart"></canvas><div id="chartError" style="display:none;color:var(--muted)"></div></div></div>
-      <div id="dicas" class="tab-content"><div class="instructions-container"><p style="color:var(--muted)">Dicas...</p></div></div>
+
+      <div id="graficos" class="tab-content">
+        <div class="chart-container" id="chartWrapper">
+          <h3 style="color:var(--accent);margin-bottom:6px">Distribuição Anual de Gastos</h3>
+          <canvas id="gastosChart"></canvas>
+          <div id="chartError" style="display:none;color:var(--muted);font-weight:600"></div>
+        </div>
+      </div>
+
     </div>
 
-    <footer style="text-align:center;padding:18px;color:#999">✨ Controle de Gastos por Fatura - Versão Pessoal</footer>
+    <footer><p>✨ Controle de Gastos por Fatura - Versão Pessoal</p></footer>
   </div>
 
   <!-- Modal de gerenciamento de períodos -->
@@ -205,7 +224,6 @@
       const div=document.createElement('div');
       div.className='period-item';
       div.dataset.id=period.id;
-      const s=`${period.name} — ${period.start} → ${period.end}`;
       div.innerHTML = `<div>
           <div style="font-weight:700">${escapeHtml(period.name)}</div>
           <div class="meta">${period.start} — ${period.end}</div>
@@ -227,7 +245,6 @@
 
     function populatePeriodSelect(){
       const sel = document.getElementById('periodSelect');
-      // preserve current selection if possible
       const current = sel.value;
       sel.innerHTML = '<option value="none">Nenhum (usar Fatura)</option>';
       const periods = loadPeriods();
@@ -259,18 +276,13 @@
       if(!name||!start||!end){ alert('Preencha nome, início e fim do período'); return; }
       const periods=loadPeriods();
       if(idField.value){
-        // edit
         const idx=periods.findIndex(p=>p.id===idField.value);
         if(idx!==-1){ periods[idx].name=name; periods[idx].start=start; periods[idx].end=end; }
       } else {
-        // new
         const newP={ id:'p_'+Date.now().toString(36), name, start, end };
         periods.push(newP);
       }
-      savePeriods(periods);
-      populatePeriodManager();
-      populatePeriodSelect();
-      // clear form
+      savePeriods(periods); populatePeriodManager(); populatePeriodSelect();
       idField.value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value='';
     }
 
@@ -282,29 +294,18 @@
       document.getElementById('periodName').value=p.name;
       document.getElementById('periodStart').value=p.start;
       document.getElementById('periodEnd').value=p.end;
-      // scroll to form
       document.getElementById('periodName').focus();
     }
 
     function deletePeriod(id){
       if(!confirm('Apagar este período?')) return;
-      let periods=loadPeriods();
-      periods=periods.filter(p=>p.id!==id);
-      savePeriods(periods);
-      populatePeriodManager();
-      populatePeriodSelect();
+      let periods=loadPeriods(); periods=periods.filter(p=>p.id!==id); savePeriods(periods);
+      populatePeriodManager(); populatePeriodSelect();
     }
 
-    function onPeriodChange(){
-      // if a period is selected, use it for filtering; else fall back to fatura logic
-      filtrarLinhas();
-    }
+    function onPeriodChange(){ filtrarLinhas(); }
 
-    /* ---------- fatura logic (period fallback) ---------- */
-    function startOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0) }
-    function endOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999) }
-
-    // default fatura period function (keeps previous behavior: start = billingDay of monthIndex-2, end = billingDay-1 of monthIndex-1)
+    /* ---------- fatura logic (fallback) ---------- */
     function faturaPeriodFor(monthIndex,year,billingDay){
       const start = startOfDay(new Date(year, monthIndex - 2, billingDay));
       const endDay = billingDay - 1;
@@ -314,7 +315,7 @@
       return { start, end };
     }
 
-    /* ---------- filtering (period select override) ---------- */
+    /* ---------- filtering (period override) ---------- */
     function filtrarLinhas(){
       const selPeriod = document.getElementById('periodSelect').value;
       const q = (document.getElementById('buscaGastos').value || '').toLowerCase().trim();
@@ -325,7 +326,6 @@
         const p = periods.find(x=>x.id===selPeriod);
         if(p){ useStart = startOfDay(new Date(p.start)); useEnd = endOfDay(new Date(p.end)); }
       } else {
-        // fallback to fatura month/year
         const sel = document.getElementById('mesSelect').value;
         const ano = parseInt(document.getElementById('anoSelect').value,10);
         const billingDay = parseInt(document.getElementById('billingDay').value,10) || 26;
@@ -351,7 +351,7 @@
       atualizarTotais();
     }
 
-    /* ---------- rest of app (add, delete, mark, totals, storage, chart) ---------- */
+    /* ---------- rest of app ---------- */
     let gastosChart=null;
 
     function switchTab(tabName,btn){
@@ -473,12 +473,14 @@
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`gastos_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
     }
 
+    document.getElementById('buscaGastos').addEventListener('input',filtrarLinhas);
+
     document.getElementById('toggleTema').addEventListener('click',()=>{
       document.body.classList.toggle('dark'); localStorage.setItem('temaEscuro_v1', document.body.classList.contains('dark'));
     });
     function carregarTema(){ if(localStorage.getItem('temaEscuro_v1')==='true') document.body.classList.add('dark') }
 
-    // chart (small doughnut)
+    // chart
     function atualizarGrafico(valFixo,valCompras,valRecebido){
       const ce=document.getElementById('chartError');
       if(typeof Chart==='undefined'){ if(ce) { ce.style.display='block'; ce.textContent='Chart.js não carregado.' } return }
@@ -493,32 +495,37 @@
     function calcularAspectRatio(){ const wrapper=document.getElementById('chartWrapper'); const w=wrapper?wrapper.clientWidth:window.innerWidth; let targetHeight=320; if(w<420) targetHeight=220; else if(w<700) targetHeight=280; else targetHeight=320; return w/targetHeight }
     window.addEventListener('resize',()=>{ if(gastosChart){ gastosChart.options.aspectRatio=calcularAspectRatio(); try{gastosChart.resize();gastosChart.update()}catch(e){} } })
 
-    /* ---------- init ---------- */
+    // periods UI init
     function populateYearOptions(){
       const sel=document.getElementById('anoSelect'); sel.innerHTML='';
       const today=new Date(); const currentYear=today.getFullYear();
       for(let y=currentYear-1;y<=currentYear+2;y++){ const opt=document.createElement('option'); opt.value=y; opt.textContent=y; sel.appendChild(opt) }
       sel.value=currentYear;
     }
+    function populatePeriodSelect(){
+      const sel=document.getElementById('periodSelect'); const cur=sel.value; sel.innerHTML='<option value="none">Nenhum (usar Fatura)</option>'; const periods=loadPeriods(); periods.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} — ${p.start} → ${p.end}`; sel.appendChild(o) }); if(Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur; else sel.value='none'
+    }
 
-    function initPeriodsAndUI(){
-      populateYearOptions();
-      populatePeriodSelect();
-      // wire modal close on Esc
+    function init(){
+      populateYearOptions(); populatePeriodSelect(); carregarTema(); carregarDoStorage();
+      const hoje=new Date(); document.getElementById('mesSelect').value=hoje.getMonth();
+      filtrarLinhas();
       document.addEventListener('keydown',e=>{ if(e.key==='Escape') closePeriodManager() })
     }
 
-    // ensure period select exists
-    function populatePeriodSelect(){ const sel=document.getElementById('periodSelect'); const cur=sel.value; sel.innerHTML='<option value="none">Nenhum (usar Fatura)</option>'; const periods=loadPeriods(); periods.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} — ${p.start} → ${p.end}`; sel.appendChild(o) }); if(Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur; else sel.value='none' }
+    // period modal helpers referenced earlier
+    function loadPeriods(){ try{ const raw=localStorage.getItem(PERIODS_KEY); return raw?JSON.parse(raw):[] }catch(e){console.error(e);return[]} }
+    function savePeriods(arr){ localStorage.setItem(PERIODS_KEY,JSON.stringify(arr)) }
+    function addPeriodToListEl(period){ const div=document.createElement('div'); div.className='period-item'; div.dataset.id=period.id; div.innerHTML=`<div><div style="font-weight:700">${escapeHtml(period.name)}</div><div class="meta">${period.start} — ${period.end}</div></div><div style="display:flex;gap:8px"><button class="btn-ghost" onclick="editPeriod('${period.id}')">Editar</button><button class="btn-ghost" onclick="deletePeriod('${period.id}')">Apagar</button></div>`; return div }
+    function populatePeriodManager(){ const list = document.getElementById('periodList'); list.innerHTML=''; const periods = loadPeriods(); if(periods.length===0){ list.innerHTML='<div style="padding:8px;color:#666">Nenhum período salvo ainda.</div>'; return } periods.forEach(p=>list.appendChild(addPeriodToListEl(p))) }
+    function openPeriodManager(){ populatePeriodManager(); document.getElementById('periodId').value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value=''; document.getElementById('periodModal').style.display='flex' }
+    function closePeriodManager(){ document.getElementById('periodModal').style.display='none'; populatePeriodSelect() }
+    function savePeriod(){ const idField=document.getElementById('periodId'); const name=document.getElementById('periodName').value.trim(); const start=document.getElementById('periodStart').value; const end=document.getElementById('periodEnd').value; if(!name||!start||!end){ alert('Preencha nome, início e fim do período'); return } const periods=loadPeriods(); if(idField.value){ const idx=periods.findIndex(p=>p.id===idField.value); if(idx!==-1){ periods[idx].name=name; periods[idx].start=start; periods[idx].end=end } } else { const newP={ id:'p_'+Date.now().toString(36), name, start, end }; periods.push(newP) } savePeriods(periods); populatePeriodManager(); populatePeriodSelect(); idField.value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value='' }
+    function editPeriod(id){ const periods=loadPeriods(); const p=periods.find(x=>x.id===id); if(!p) return; document.getElementById('periodId').value=p.id; document.getElementById('periodName').value=p.name; document.getElementById('periodStart').value=p.start; document.getElementById('periodEnd').value=p.end; document.getElementById('periodName').focus() }
+    function deletePeriod(id){ if(!confirm('Apagar este período?')) return; let periods=loadPeriods(); periods=periods.filter(p=>p.id!==id); savePeriods(periods); populatePeriodManager(); populatePeriodSelect() }
 
-    document.addEventListener('DOMContentLoaded',()=>{
-      initPeriodsAndUI();
-      carregarTema();
-      carregarDoStorage();
-      // default selects
-      const hoje=new Date(); document.getElementById('mesSelect').value=hoje.getMonth();
-      filtrarLinhas();
-    });
+    // start
+    document.addEventListener('DOMContentLoaded',init);
   </script>
 </body>
 </html>

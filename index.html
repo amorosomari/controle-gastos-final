@@ -102,6 +102,8 @@
         body.dark td { border-color: rgba(255,255,255,0.03); }
         .categoria-fixo { background:#fce7f3; color:#be123c; padding:4px 10px; border-radius:8px; font-weight:600; }
         .categoria-compras { background:#fcd34d; color:#78350f; padding:4px 10px; border-radius:8px; font-weight:600; }
+        .categoria-transporte { background:#bfdbfe; color:#1e3a8a; padding:4px 10px; border-radius:8px; font-weight:600; }
+        .categoria-ratos { background:#fde68a; color:#92400e; padding:4px 10px; border-radius:8px; font-weight:600; }
         .parcela-info { background:#e9d5ff; padding:6px 8px; border-radius:6px; font-weight:600; color:#6b21a8; }
         .tipo-parcelado { background:#c084fc; color:white; padding:4px 8px; border-radius:6px; font-weight:600; }
         .tipo-recorrente { background:#d1d5db; color:#1f2937; padding:4px 8px; border-radius:6px; font-weight:600; }
@@ -141,8 +143,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1> 💰 Controle de Gastos </h1>
-            <p>Gerenciamento de gastos, parcelamentos e projeções mensais</p>
+            <h1>📅 Controle de Gastos Anual</h1>
+            <p>Gerencie seus gastos, parcelamentos e projeções mensais</p>
         </div>
 
         <div class="content">
@@ -153,11 +155,11 @@
                 <button class="tab-btn" onclick="switchTab('dicas', this)" role="tab">💡 Dicas</button>
             </div>
 
-            <!-- TOOLBAR: fatura, busca, ações -->
+            <!-- TOOLBAR: mês, busca, ações -->
             <div class="toolbar">
                 <div class="left">
-                    <label for="faturaSelect" class="small" style="margin-right:6px;">Fatura:</label>
-                    <select id="faturaSelect" aria-label="Selecionar fatura" onchange="carregarFatura()">
+                    <label for="mesSelect" class="small" style="margin-right:6px;">Mês:</label>
+                    <select id="mesSelect" aria-label="Selecionar mês" onchange="carregarMes()">
                         <option value="0">Janeiro</option>
                         <option value="1">Fevereiro</option>
                         <option value="2">Março</option>
@@ -198,11 +200,9 @@
                         <select id="inputCat">
                             <option value="">Selecione...</option>
                             <option value="Fixo">Fixo</option>
-                            <option value="Roupas e sapatos">Roupas e sapatos</option>
-                            <option value="Tranqueira">Tranqueira</option>
-                            <option value="Comida">Comida</option>
-                            <option value="Ratos">Ratos</option>
+                            <option value="Compras">Compras</option>
                             <option value="Transporte">Transporte</option>
+                            <option value="Ratos">Ratos</option>
                         </select>
                     </div>
                     <div>
@@ -452,7 +452,15 @@
 
             const valor = parseFloat(val);
             const valorParcela = (valor / parcelas).toFixed(2);
-            const catSpan = cat === 'Fixo' ? `<span class="categoria-fixo">Fixo</span>` : `<span class="categoria-compras">Compras</span>`;
+
+            // escolher span baseado na categoria
+            let catSpan = '';
+            if (cat === 'Fixo') catSpan = `<span class="categoria-fixo">Fixo</span>`;
+            else if (cat === 'Compras') catSpan = `<span class="categoria-compras">Compras</span>`;
+            else if (cat === 'Transporte') catSpan = `<span class="categoria-transporte">Transporte</span>`;
+            else if (cat === 'Ratos') catSpan = `<span class="categoria-ratos">Ratos</span>`;
+            else catSpan = `<span class="categoria-compras">${escapeHtml(cat)}</span>`;
+
             const tipo = parcelas > 1 ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
 
             const tabela = document.getElementById('tabelaGastos');
@@ -505,7 +513,8 @@
                 const pago = row.querySelector('td:nth-child(7)').textContent.includes('☑');
 
                 if (cat.includes('Fixo')) totalFixo += valor;
-                else if (cat.includes('Compras')) totalCompras += valor;
+                // tratamos Compras, Transporte e Ratos como parte de "Compras" no resumo
+                else if (cat.includes('Compras') || cat.includes('Transporte') || cat.includes('Ratos')) totalCompras += valor;
 
                 if (pago) totalPago += valor;
             });

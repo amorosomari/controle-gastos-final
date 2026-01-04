@@ -556,7 +556,8 @@
             <div id="graficos" class="tab-content">
                 <div class="chart-container">
                     <h2 style="color: #ec4899; margin-bottom: 20px;">Distribuição Anual de Gastos</h2>
-                    <img src="[IMAGE_URL]" alt="Gráfico de Gastos Anual">
+                    <!-- substituído o placeholder por um canvas que será desenhado com Chart.js -->
+                    <canvas id="gastosChart" width="600" height="320"></canvas>
                 </div>
                 <div class="summary-container">
                     <div class="summary-card">
@@ -599,9 +600,14 @@
         </footer>
     </div>
 
+    <!-- Chart.js CDN (necessário para desenhar o gráfico) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
         const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        let gastosChart = null; // referência ao Chart.js
 
         function switchTab(tabName, btn) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -707,9 +713,54 @@
             document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalMes').textContent = 'R$ ' + totalMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+            // atualiza o gráfico com os novos valores
+            atualizarGrafico(totalFixo, totalCompras);
         }
 
-        atualizarTotais();
+        function atualizarGrafico(valFixo, valCompras) {
+            const ctx = document.getElementById('gastosChart').getContext('2d');
+            const data = {
+                labels: ['Fixos', 'Compras'],
+                datasets: [{
+                    data: [valFixo, valCompras],
+                    backgroundColor: ['#ec4899', '#fcd34d'],
+                    hoverBackgroundColor: ['#db2777', '#f59e0b'],
+                    borderWidth: 0
+                }]
+            };
+
+            if (gastosChart) {
+                gastosChart.data = data;
+                gastosChart.update();
+                return;
+            }
+
+            gastosChart = new Chart(ctx, {
+                type: 'doughnut',
+                data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    return context.label + ': R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // initialização
+        document.addEventListener('DOMContentLoaded', () => {
+            atualizarTotais();
+        });
     </script>
 </body>
 </html>

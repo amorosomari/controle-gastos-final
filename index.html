@@ -5,417 +5,137 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Gastos Anual com Parcelamentos</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --accent:#ec4899;
+            --muted:#7f1d1d;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 50%, #f9a8d4 100%);
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 30px 16px;
+            color: #374151;
+        }
+
+        body.dark {
+            background: linear-gradient(135deg,#0b1020 0%, #071433 100%);
+            color: #e6eef8;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(236, 72, 153, 0.15);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(236,72,153,0.12);
             overflow: hidden;
         }
 
+        body.dark .container { background: #071033; box-shadow: none; }
+
         .header {
-            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            background: linear-gradient(135deg, var(--accent) 0%, #db2777 100%);
             color: white;
-            padding: 50px 40px;
+            padding: 28px 22px;
             text-align: center;
-            border-bottom: 5px solid #be123c;
+            border-bottom: 4px solid #be123c;
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
+        .header h1 { font-size: 1.6rem; font-weight:700; margin-bottom:4px; }
+        .header p { font-size: 0.95rem; opacity:0.95; font-weight:300; }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.95;
-            font-weight: 300;
-        }
+        .content { padding: 22px; }
 
-        .content {
-            padding: 50px 40px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #f3e8f5;
-            overflow-x: auto;
-        }
-
+        .tabs { display:flex; gap:10px; margin-bottom:18px; border-bottom:2px solid #f3e8f5; overflow-x:auto; padding:6px 4px; }
         .tab-btn {
-            padding: 15px 25px;
-            background: none;
-            border: none;
-            font-size: 1em;
-            cursor: pointer;
-            color: #9ca3af;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
-            border-bottom: 3px solid transparent;
-            white-space: nowrap;
+            padding:10px 14px; background:none; border:none; cursor:pointer; color:#9ca3af; font-weight:600; border-bottom:3px solid transparent; border-radius:8px;
+        }
+        .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); background:rgba(236,72,153,0.03); }
+        .tab-btn:hover { color:#db2777; }
+
+        /* toolbar (mês, busca, ações) */
+        .toolbar {
+            display:flex;
+            gap:10px;
+            align-items:center;
+            margin-bottom:18px;
+            flex-wrap:wrap;
+        }
+        .toolbar .left, .toolbar .right { display:flex; gap:8px; align-items:center; }
+        .toolbar input[type="search"], .toolbar select {
+            padding:8px 10px; border-radius:8px; border:1px solid #fbcfe8;
+            background:white;
+        }
+        body.dark .toolbar input[type="search"], body.dark .toolbar select { background:#0b1730; border-color: rgba(255,255,255,0.06); color:#cfe6ff; }
+
+        .toolbar button {
+            padding:10px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600;
+            background:linear-gradient(135deg,var(--accent) 0%, #db2777 100%); color:white;
+        }
+        .toolbar .secondary {
+            background:#faf5ff; color:var(--muted); border:1px solid #f3e8f5;
+        }
+        body.dark .toolbar .secondary { background:transparent; color:#cfe6ff; border-color: rgba(255,255,255,0.06); }
+
+        .tab-content { display:none; padding-top:6px; }
+        .tab-content.active { display:block; }
+
+        .form-group { display:grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:14px; padding:16px; background:white; border-radius:10px; border:1px solid #f9a8d4; }
+        body.dark .form-group { background:linear-gradient(180deg,#061230,#061230); border-color: rgba(255,255,255,0.04); }
+
+        input, select { padding:10px; border-radius:8px; border:1px solid #fbcfe8; font-size:0.95rem; }
+        input:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(236,72,153,0.06); }
+        label { font-weight:600; margin-bottom:6px; display:block; color:var(--muted); }
+
+        .table-container { background:#faf5ff; border-radius:12px; padding:18px; margin-bottom:16px; border:1px solid #f9a8d4; overflow:auto; }
+        body.dark .table-container { background:transparent; border-color: rgba(255,255,255,0.04); }
+
+        table { width:100%; border-collapse:collapse; min-width:0; }
+        thead tr { background:linear-gradient(90deg,var(--accent) 0%, #db2777 100%); color:white; position:sticky; top:0; z-index:1; }
+        th { padding:12px 10px; text-align:left; font-weight:700; font-size:0.9rem; }
+        td { padding:12px 10px; border-bottom:1px solid #fbcfe8; font-weight:500; vertical-align:middle; }
+        tbody tr:hover { background:#fff1f7; }
+        tbody tr:nth-child(even) { background: #ffffff; }
+        body.dark td { border-color: rgba(255,255,255,0.03); }
+        .categoria-fixo { background:#fce7f3; color:#be123c; padding:4px 10px; border-radius:8px; font-weight:600; }
+        .categoria-compras { background:#fcd34d; color:#78350f; padding:4px 10px; border-radius:8px; font-weight:600; }
+        .parcela-info { background:#e9d5ff; padding:6px 8px; border-radius:6px; font-weight:600; color:#6b21a8; }
+        .tipo-parcelado { background:#c084fc; color:white; padding:4px 8px; border-radius:6px; font-weight:600; }
+        .tipo-recorrente { background:#d1d5db; color:#1f2937; padding:4px 8px; border-radius:6px; font-weight:600; }
+        .status-pendente { background:#fecaca; color:#7f1d1d; padding:6px 10px; border-radius:6px; font-weight:600; }
+        .status-pago { background:#bbf7d0; color:#15803d; padding:6px 10px; border-radius:6px; font-weight:600; }
+
+        .checkbox-cell { text-align:center; font-size:1.2rem; cursor:pointer; }
+
+        .summary-container { display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:8px; }
+        .summary-card { background:linear-gradient(135deg,#fce7f3 0%, #fbcfe8 100%); padding:14px; border-radius:10px; border-left:6px solid var(--accent); box-shadow:0 8px 20px rgba(236,72,153,0.06); }
+        .summary-card h3 { font-size:0.82rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+        .summary-card .value { font-size:1.4rem; color:var(--accent); font-weight:800; }
+
+        .chart-container { background:white; padding:14px; border-radius:12px; margin:16px 0; border:1px solid #f9a8d4; text-align:center; display:flex; flex-direction:column; gap:8px; }
+        .chart-container canvas { width:100%; height:auto; display:block; }
+
+        footer { text-align:center; padding:18px; color:#999; font-size:0.9rem; background:#faf5ff; border-top:1px solid #f9a8d4; }
+
+        /* responsive: table -> cards */
+        @media (max-width:800px) {
+            thead { display:none; }
+            table, tbody, tr, td { display:block; width:100%; }
+            tr { margin-bottom:10px; padding:12px; border-radius:10px; background:white; border:1px solid #f3e8f5; }
+            td { padding:8px 6px; border-bottom:none; display:flex; justify-content:space-between; align-items:center; }
+            td::before { content: attr(data-label); color:var(--muted); font-weight:700; margin-right:8px; flex:0 0 auto; }
+            td > * { flex:1 1 auto; text-align:right; }
+            .toolbar { gap:6px; }
+            .form-group { padding:12px; }
+            .chart-container { padding:12px; }
+            footer { font-size:0.8rem; }
         }
 
-        .tab-btn.active {
-            color: #ec4899;
-            border-bottom-color: #ec4899;
-        }
-
-        .tab-btn:hover {
-            color: #db2777;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .table-container {
-            background: #faf5ff;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border: 2px solid #f9a8d4;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 0; /* removido o min-width fixo para evitar scroll forçado */
-        }
-
-        thead tr {
-            background: linear-gradient(90deg, #ec4899 0%, #db2777 100%);
-            color: white;
-            position: sticky;
-            top: 0;
-        }
-
-        th {
-            padding: 18px;
-            text-align: left;
-            font-weight: 700;
-            font-size: 0.95em;
-            letter-spacing: 0.5px;
-        }
-
-        td {
-            padding: 16px 18px;
-            border-bottom: 1px solid #fbcfe8;
-            color: #374151;
-            font-weight: 500;
-        }
-
-        tbody tr {
-            transition: background-color 0.2s ease;
-        }
-
-        tbody tr:hover {
-            background-color: #fce7f3;
-        }
-
-        tbody tr:nth-child(even) {
-            background-color: #ffffff;
-        }
-
-        .categoria-fixo {
-            background: #fce7f3;
-            color: #be123c;
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9em;
-            display: inline-block;
-        }
-
-        .categoria-compras {
-            background: #fcd34d;
-            color: #78350f;
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9em;
-            display: inline-block;
-        }
-
-        .tipo-recorrente {
-            background: #d1d5db;
-            color: #1f2937;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: 600;
-        }
-
-        .tipo-parcelado {
-            background: #c084fc;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: 600;
-        }
-
-        .status-pendente {
-            background: #fecaca;
-            color: #7f1d1d;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85em;
-        }
-
-        .status-pago {
-            background: #bbf7d0;
-            color: #15803d;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85em;
-        }
-
-        .checkbox-cell {
-            text-align: center;
-            font-size: 1.3em;
-            cursor: pointer;
-        }
-
-        .summary-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            margin-top: 40px;
-        }
-
-        .summary-card {
-            background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid #ec4899;
-            box-shadow: 0 8px 20px rgba(236, 72, 153, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .summary-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .summary-card h3 {
-            color: #7f1d1d;
-            font-size: 0.95em;
-            font-weight: 600;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .summary-card .value {
-            font-size: 2em;
-            color: #ec4899;
-            font-weight: 700;
-        }
-
-        .chart-container {
-            background: white;
-            padding: 16px 18px;
-            border-radius: 15px;
-            margin: 20px 0;
-            border: 2px solid #f9a8d4;
-            text-align: center;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* canvas sem altura fixa: Chart.js usará aspectRatio para determinar a altura */
-        .chart-container canvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            margin-top: 6px;
-        }
-
-        .chart-error {
-            padding: 20px;
-            color: #7f1d1d;
-            font-weight: 600;
-        }
-
-        .instructions-container {
-            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
-            padding: 30px;
-            border-radius: 15px;
-            border-left: 5px solid #db2777;
-            margin-top: 30px;
-        }
-
-        .instructions-container h2 {
-            color: #ec4899;
-            margin-bottom: 20px;
-            font-size: 1.4em;
-        }
-
-        .instructions-container ol {
-            list-style-position: inside;
-            color: #7f1d1d;
-            line-height: 2;
-            font-weight: 500;
-        }
-
-        .instructions-container li {
-            margin-bottom: 12px;
-        }
-
-        .add-button {
-            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 10px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
-        }
-
-        .add-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3);
-        }
-
-        .form-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            border: 2px solid #f9a8d4;
-        }
-
-        input, select {
-            padding: 12px;
-            border: 2px solid #fbcfe8;
-            border-radius: 8px;
-            font-size: 0.95em;
-            transition: border-color 0.3s ease;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: #ec4899;
-            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
-        }
-
-        label {
-            display: block;
-            color: #7f1d1d;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-        }
-
-        .form-group > div {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .month-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-
-        .month-selector label {
-            margin: 0;
-            margin-bottom: 0;
-        }
-
-        .month-selector select {
-            flex: 1;
-            max-width: 300px;
-        }
-
-        footer {
-            text-align: center;
-            padding: 30px;
-            color: #999;
-            font-size: 0.9em;
-            background: #faf5ff;
-            border-top: 2px solid #f9a8d4;
-        }
-
-        .parcela-info {
-            background: #e9d5ff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 0.85em;
-            font-weight: 600;
-            color: #6b21a8;
-        }
-
-        /* RESPONSIVE TABLE -> transforma linhas em "cards" nas telas menores */
-        @media (max-width: 800px) {
-            thead { display: none; }
-            table, tbody, tr, td { display: block; width: 100%; }
-            tr {
-                margin-bottom: 12px;
-                padding: 12px;
-                border-radius: 10px;
-                background: white;
-                border: 1px solid #f3e8f5;
-            }
-            td {
-                padding: 8px 0;
-                border-bottom: none;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            td::before {
-                content: attr(data-label);
-                color: #7f1d1d;
-                font-weight: 700;
-                margin-right: 10px;
-                flex: 0 0 auto;
-            }
-            td > * { flex: 1 1 auto; text-align: right; }
-            .checkbox-cell { text-align: right; font-size: 1.4em; }
-            .table-container { padding: 18px; }
-        }
+        /* small visual tweaks */
+        .small { font-size:0.85rem; padding:6px 8px; }
     </style>
 </head>
 <body>
@@ -426,18 +146,18 @@
         </div>
 
         <div class="content">
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('gastos', this)">📊 Meus Gastos</button>
-                <button class="tab-btn" onclick="switchTab('parcelamentos', this)">💳 Parcelamentos</button>
-                <button class="tab-btn" onclick="switchTab('graficos', this)">📈 Análise Anual</button>
-                <button class="tab-btn" onclick="switchTab('dicas', this)">💡 Dicas</button>
+            <div class="tabs" role="tablist" aria-label="Navegação principal">
+                <button class="tab-btn active" onclick="switchTab('gastos', this)" role="tab" aria-selected="true">📊 Meus Gastos</button>
+                <button class="tab-btn" onclick="switchTab('parcelamentos', this)" role="tab">💳 Parcelamentos</button>
+                <button class="tab-btn" onclick="switchTab('graficos', this)" role="tab">📈 Análise Anual</button>
+                <button class="tab-btn" onclick="switchTab('dicas', this)" role="tab">💡 Dicas</button>
             </div>
 
-            <!-- TAB GASTOS -->
-            <div id="gastos" class="tab-content active">
-                <div class="month-selector">
-                    <label for="mesSelect">Visualizar Mês:</label>
-                    <select id="mesSelect" onchange="carregarMes()">
+            <!-- TOOLBAR: mês, busca, ações -->
+            <div class="toolbar">
+                <div class="left">
+                    <label for="mesSelect" class="small" style="margin-right:6px;">Mês:</label>
+                    <select id="mesSelect" aria-label="Selecionar mês" onchange="carregarMes()">
                         <option value="0">Janeiro</option>
                         <option value="1">Fevereiro</option>
                         <option value="2">Março</option>
@@ -451,19 +171,30 @@
                         <option value="10">Novembro</option>
                         <option value="11">Dezembro</option>
                     </select>
+
+                    <input id="buscaGastos" type="search" placeholder="Buscar descrição..." aria-label="Buscar gastos">
+                    <button onclick="exportarCSV()" class="secondary small">Exportar CSV</button>
                 </div>
 
-                <div class="form-group">
+                <div class="right">
+                    <button id="toggleTema" title="Alternar tema">🌙</button>
+                    <button onclick="focusAdicionar()" class="small">+ Adicionar</button>
+                </div>
+            </div>
+
+            <!-- TAB GASTOS -->
+            <div id="gastos" class="tab-content active" role="tabpanel">
+                <div class="form-group" aria-label="Formulário de novo gasto">
                     <div>
-                        <label>Data</label>
+                        <label for="inputData">Data</label>
                         <input type="date" id="inputData">
                     </div>
                     <div>
-                        <label>Descrição</label>
+                        <label for="inputDesc">Descrição</label>
                         <input type="text" id="inputDesc" placeholder="Ex: Aluguel">
                     </div>
                     <div>
-                        <label>Categoria</label>
+                        <label for="inputCat">Categoria</label>
                         <select id="inputCat">
                             <option value="">Selecione...</option>
                             <option value="Fixo">Fixo</option>
@@ -471,17 +202,21 @@
                         </select>
                     </div>
                     <div>
-                        <label>Valor (R$)</label>
+                        <label for="inputVal">Valor (R$)</label>
                         <input type="number" id="inputVal" placeholder="0,00" step="0.01">
                     </div>
                     <div>
-                        <label>Parcelas</label>
+                        <label for="inputParcelas">Parcelas</label>
                         <input type="number" id="inputParcelas" placeholder="1" min="1" max="12" value="1">
                     </div>
                 </div>
-                <button class="add-button" onclick="adicionarGasto()">+ Adicionar Gasto</button>
 
-                <div class="table-container">
+                <!-- botão adiciona aqui apenas como alternativa; principal fica na toolbar -->
+                <div style="margin-bottom:12px;">
+                    <button class="small" onclick="adicionarGasto()">+ Adicionar Gasto</button>
+                </div>
+
+                <div class="table-container" aria-live="polite">
                     <table>
                         <thead>
                             <tr>
@@ -506,7 +241,7 @@
                                 <td data-label="Tipo"><span class="tipo-recorrente">Recorrente</span></td>
                                 <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td>
                                 <td data-label="Status"><span class="status-pendente">Pendente</span></td>
-                                <td data-label="Ação"><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                                <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
                             </tr>
                             <tr>
                                 <td data-label="Data">01/01/2026</td>
@@ -517,7 +252,7 @@
                                 <td data-label="Tipo"><span class="tipo-recorrente">Recorrente</span></td>
                                 <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td>
                                 <td data-label="Status"><span class="status-pendente">Pendente</span></td>
-                                <td data-label="Ação"><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                                <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
                             </tr>
                             <tr>
                                 <td data-label="Data">05/01/2026</td>
@@ -528,13 +263,13 @@
                                 <td data-label="Tipo"><span class="tipo-parcelado">Parcelado</span></td>
                                 <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td>
                                 <td data-label="Status"><span class="status-pendente">Pendente</span></td>
-                                <td data-label="Ação"><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
+                                <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="summary-container">
+                <div class="summary-container" aria-hidden="false">
                     <div class="summary-card">
                         <h3>💰 Total Fixo</h3>
                         <div class="value" id="totalFixo">R$ 1.700,00</div>
@@ -555,23 +290,14 @@
             </div>
 
             <!-- TAB PARCELAMENTOS -->
-            <div id="parcelamentos" class="tab-content">
-                <div class="instructions-container">
-                    <h2>💳 Sistema de Parcelamentos</h2>
-                    <p style="color: #7f1d1d; margin-bottom: 20px; font-weight: 500;">
-                        Quando você adiciona um gasto com múltiplas parcelas, o sistema cria automaticamente as demais parcelas nos próximos meses.
-                    </p>
-                    <h3 style="color: #ec4899; margin-top: 20px; margin-bottom: 10px;">Exemplo prático:</h3>
-                    <p style="color: #7f1d1d; font-weight: 500;">
-                        ✨ Se você comprou um Notebook de R$ 1.200 em 3 parcelas em Janeiro:<br>
-                        • Janeiro: Notebook 1/3 - R$ 400,00<br>
-                        • Fevereiro: Notebook 2/3 - R$ 400,00<br>
-                        • Março: Notebook 3/3 - R$ 400,00
-                    </p>
+            <div id="parcelamentos" class="tab-content" role="tabpanel">
+                <div class="instructions-container" style="margin-bottom:12px;">
+                    <h2 style="color:var(--accent); margin-bottom:8px;">💳 Sistema de Parcelamentos</h2>
+                    <p style="color:var(--muted); margin-bottom:8px;">Quando você adiciona um gasto com múltiplas parcelas, o sistema cria automaticamente as demais parcelas nos próximos meses.</p>
                 </div>
 
-                <div class="table-container" style="margin-top: 30px;">
-                    <h2 style="color: #ec4899; margin-bottom: 20px; font-size: 1.3em;">📋 Parcelas Ativas</h2>
+                <div class="table-container">
+                    <h3 style="color:var(--accent); margin-bottom:10px;">📋 Parcelas Ativas</h3>
                     <table>
                         <thead>
                             <tr>
@@ -596,85 +322,82 @@
             </div>
 
             <!-- TAB GRÁFICOS -->
-            <div id="graficos" class="tab-content">
+            <div id="graficos" class="tab-content" role="tabpanel">
                 <div class="chart-container" id="chartWrapper">
-                    <h2 style="color: #ec4899; margin-bottom: 8px;">Distribuição Anual de Gastos</h2>
+                    <h3 style="color:var(--accent); margin-bottom:6px;">Distribuição Anual de Gastos</h3>
                     <canvas id="gastosChart"></canvas>
-                    <div id="chartError" class="chart-error" style="display:none;"></div>
+                    <div id="chartError" style="display:none; color:var(--muted); font-weight:600;"></div>
                 </div>
-                <div class="summary-container">
+
+                <div class="summary-container" style="margin-top:6px;">
                     <div class="summary-card">
                         <h3>💳 Gastos Fixos (Ano)</h3>
                         <div class="value">R$ 21.840</div>
-                        <p style="color: #7f1d1d; margin-top: 10px; font-weight: 500;">1.820/mês</p>
+                        <p class="small" style="color:var(--muted); margin-top:6px;">1.820/mês</p>
                     </div>
                     <div class="summary-card">
                         <h3>🎁 Compras Avulsas</h3>
                         <div class="value">R$ 530,50</div>
-                        <p style="color: #7f1d1d; margin-top: 10px; font-weight: 500;">Parcela inicial</p>
+                        <p class="small" style="color:var(--muted); margin-top:6px;">Parcela inicial</p>
                     </div>
                     <div class="summary-card">
                         <h3>💰 Parcelamentos</h3>
                         <div class="value">R$ 5.400</div>
-                        <p style="color: #7f1d1d; margin-top: 10px; font-weight: 500;">Distribuído nos meses</p>
+                        <p class="small" style="color:var(--muted); margin-top:6px;">Distribuído nos meses</p>
                     </div>
                 </div>
             </div>
 
             <!-- TAB DICAS -->
-            <div id="dicas" class="tab-content">
+            <div id="dicas" class="tab-content" role="tabpanel">
                 <div class="instructions-container">
-                    <h2>💡 Como Usar Parcelamentos</h2>
-                    <ol>
-                        <li><strong>Adicione um gasto parcelado:</strong> Na aba "Meus Gastos", defina quantas parcelas você quer (ex: 3 para compra de 3x)</li>
-                        <li><strong>O sistema cria automaticamente:</strong> As parcelas aparecerão nos próximos meses com a descrição atualizada (Produto 1/3, 2/3, 3/3)</li>
-                        <li><strong>Cada parcela é independente:</strong> Você pode marcar como pago individualmente conforme o cartão cobra</li>
-                        <li><strong>Visualize futuro:</strong> Mude entre meses no selector para ver suas obrigações futuras</li>
-                        <li><strong>Acompanhe parcelas:</strong> Na aba "Parcelamentos" você vê um resumo de tudo que está parcelado</li>
-                        <li><strong>Organize financeiro:</strong> Veja com antecedência quanto você terá comprometido em cada mês</li>
-                        <li><strong>Planeje melhor:</strong> Use os dados para entender seus gastos e não fazer compras que não caibam no orçamento</li>
+                    <h2 style="color:var(--accent); margin-bottom:8px;">💡 Como Usar Parcelamentos</h2>
+                    <ol style="color:var(--muted); line-height:1.8;">
+                        <li>Adicione um gasto parcelado: defina quantas parcelas você quer.</li>
+                        <li>O sistema cria automaticamente as parcelas nos próximos meses.</li>
+                        <li>Marque cada parcela como paga individualmente.</li>
+                        <li>Use a aba "Parcelamentos" para ver tudo compactado.</li>
                     </ol>
                 </div>
             </div>
+
         </div>
 
         <footer>
-            <p>✨ Controle de Gastos Anual com Parcelamentos - Versão 2.0 | Desenvolvido com ❤️ em Rosa</p>
+            <p>✨ Controle de Gastos Anual - Versão Pessoal | Desenvolvido com ❤️</p>
         </footer>
     </div>
 
-    <!-- Chart.js CDN (necessário para desenhar o gráfico) -->
+    <!-- Chart.js (carregado imediatamente; se preferir lazy-load posso mudar) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        // meses
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+        // Chart reference
         let gastosChart = null;
 
+        // --- TAB SWITCH ---
         function switchTab(tabName, btn) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-            const tabEl = document.getElementById(tabName);
-            if (tabEl) tabEl.classList.add('active');
+            const el = document.getElementById(tabName);
+            if (el) el.classList.add('active');
             if (btn) btn.classList.add('active');
 
-            // Se abrir a aba de gráficos, forçar resize/update (Chart.js precisa do elemento visível)
+            // when opening graphs, ensure chart is ready/resized
             if (tabName === 'graficos') {
                 setTimeout(() => {
-                    const chartErrorEl = document.getElementById('chartError');
                     if (typeof Chart === 'undefined') {
-                        chartErrorEl.style.display = 'block';
-                        chartErrorEl.textContent = 'Biblioteca Chart.js não carregada. Verifique conexão / bloqueadores (adblock, CSP).';
+                        document.getElementById('chartError').style.display = 'block';
+                        document.getElementById('chartError').textContent = 'Chart.js não carregado (bloqueado?).';
                         return;
                     } else {
-                        chartErrorEl.style.display = 'none';
+                        document.getElementById('chartError').style.display = 'none';
                     }
-
                     if (gastosChart) {
-                        atualizarAspectRatio();
-                        try { gastosChart.resize(); gastosChart.update(); } catch (e) { atualizarTotais(); }
+                        try { gastosChart.resize(); gastosChart.update(); } catch(e){ atualizarTotais(); }
                     } else {
                         atualizarTotais();
                     }
@@ -682,11 +405,14 @@
             }
         }
 
+        // --- MÊS SELECTION ---
         function carregarMes() {
             const mesIdx = document.getElementById('mesSelect').value;
-            alert(`Mês selecionado: ${meses[mesIdx]}`);
+            // para uso pessoal, apenas notificamos; você pode filtrar por mês se quiser
+            console.log('Mês selecionado:', meses[mesIdx]);
         }
 
+        // --- MARCAR PAGO ---
         function marcarPago(cell) {
             const checkbox = cell.textContent.trim();
             const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
@@ -698,11 +424,19 @@
                 if (statusCell) statusCell.innerHTML = '<span class="status-pendente">Pendente</span>';
             }
             atualizarTotais();
+            salvarNoStorage();
+        }
+
+        // --- ADICIONAR GASTO ---
+        function focusAdicionar() {
+            // foca o primeiro input do formulário para facilitar
+            const el = document.getElementById('inputData') || document.getElementById('inputDesc');
+            if (el) el.focus();
         }
 
         function adicionarGasto() {
             const data = document.getElementById('inputData').value;
-            const desc = document.getElementById('inputDesc').value;
+            const desc = document.getElementById('inputDesc').value.trim();
             const cat = document.getElementById('inputCat').value;
             const val = document.getElementById('inputVal').value;
             const parcelas = parseInt(document.getElementById('inputParcelas').value) || 1;
@@ -714,27 +448,25 @@
 
             const valor = parseFloat(val);
             const valorParcela = (valor / parcelas).toFixed(2);
-            const catSpan = cat === 'Fixo'
-                ? `<span class="categoria-fixo">Fixo</span>`
-                : `<span class="categoria-compras">Compras</span>`;
+            const catSpan = cat === 'Fixo' ? `<span class="categoria-fixo">Fixo</span>` : `<span class="categoria-compras">Compras</span>`;
             const tipo = parcelas > 1 ? '<span class="tipo-parcelado">Parcelado</span>' : '<span class="tipo-recorrente">Único</span>';
 
-            const newRow = `
-                <tr>
-                    <td data-label="Data">${data}</td>
-                    <td data-label="Descrição">${desc}</td>
-                    <td data-label="Categoria">${catSpan}</td>
-                    <td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                    <td data-label="Parcela"><span class="parcela-info">1/${parcelas}</span></td>
-                    <td data-label="Tipo">${tipo}</td>
-                    <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td>
-                    <td data-label="Status"><span class="status-pendente">Pendente</span></td>
-                    <td data-label="Ação"><button onclick="deletarGasto(this)" style="background: #fee2e2; color: #dc2626; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">✕</button></td>
-                </tr>
+            const tabela = document.getElementById('tabelaGastos');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td data-label="Data">${data}</td>
+                <td data-label="Descrição">${escapeHtml(desc)}</td>
+                <td data-label="Categoria">${catSpan}</td>
+                <td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td data-label="Parcela"><span class="parcela-info">1/${parcelas}</span></td>
+                <td data-label="Tipo">${tipo}</td>
+                <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td>
+                <td data-label="Status"><span class="status-pendente">Pendente</span></td>
+                <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
             `;
+            tabela.appendChild(tr);
 
-            document.getElementById('tabelaGastos').insertAdjacentHTML('beforeend', newRow);
-
+            // limpar campos
             document.getElementById('inputData').value = '';
             document.getElementById('inputDesc').value = '';
             document.getElementById('inputCat').value = '';
@@ -742,69 +474,157 @@
             document.getElementById('inputParcelas').value = '1';
 
             atualizarTotais();
+            salvarNoStorage();
         }
 
+        // --- DELETAR GASTO ---
         function deletarGasto(btn) {
-            btn.closest('tr').remove();
+            const tr = btn.closest('tr');
+            if (!tr) return;
+            // confirmação simples
+            if (!confirm('Deseja realmente excluir este gasto?')) return;
+            tr.remove();
             atualizarTotais();
+            salvarNoStorage();
         }
 
+        // --- ATUALIZAR TOTAIS ---
         function atualizarTotais() {
             let totalFixo = 0, totalCompras = 0, totalPago = 0;
             const rows = document.querySelectorAll('#tabelaGastos tr');
 
             rows.forEach(row => {
                 const cat = row.querySelector('td:nth-child(3)').textContent;
-                let valorText = row.querySelector('td:nth-child(4)').textContent.replace('R$ ', '').trim();
-                valorText = valorText.replace(/\./g, '').replace(',', '.');
+                let valorText = row.querySelector('td:nth-child(4)').textContent.replace('R$','').trim();
+                valorText = valorText.replace(/\./g,'').replace(',', '.');
                 const valor = parseFloat(valorText) || 0;
                 const pago = row.querySelector('td:nth-child(7)').textContent.includes('☑');
 
-                if (cat.includes('Fixo')) {
-                    totalFixo += valor;
-                } else if (cat.includes('Compras')) {
-                    totalCompras += valor;
-                }
+                if (cat.includes('Fixo')) totalFixo += valor;
+                else if (cat.includes('Compras')) totalCompras += valor;
 
-                if (pago) {
-                    totalPago += valor;
-                }
+                if (pago) totalPago += valor;
             });
 
             const totalMes = totalFixo + totalCompras;
-
             document.getElementById('totalFixo').textContent = 'R$ ' + totalFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalCompras').textContent = 'R$ ' + totalCompras.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalMes').textContent = 'R$ ' + totalMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             document.getElementById('totalPago').textContent = 'R$ ' + totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-            // atualiza o gráfico com os novos valores
             atualizarGrafico(totalFixo, totalCompras);
         }
 
-        // calcula aspectRatio baseado na largura do contêiner para que o gráfico determine sua altura
-        function calcularAspectRatio() {
-            const wrapper = document.getElementById('chartWrapper');
-            const w = wrapper ? wrapper.clientWidth : window.innerWidth;
-            // define altura alvo conforme largura (ajuste se quiser outras proporções)
-            let targetHeight = 320;
-            if (w < 420) targetHeight = 220;
-            else if (w < 700) targetHeight = 280;
-            else targetHeight = 320;
-            return w / targetHeight;
+        // --- ESCAPAR HTML em descrições para evitar injeção simples (uso pessoal mas bom praticar) ---
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]; });
         }
 
-        function atualizarAspectRatio() {
-            if (!gastosChart) return;
-            const asp = calcularAspectRatio();
-            gastosChart.options.aspectRatio = asp;
+        // --- STORAGE (localStorage) ---
+        const STORAGE_KEY = 'meusGastos_v1';
+
+        function salvarNoStorage() {
+            try {
+                const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'));
+                const gastos = rows.map(row => ({
+                    data: row.querySelector('td:nth-child(1)').textContent.trim(),
+                    descricao: row.querySelector('td:nth-child(2)').textContent.trim(),
+                    categoriaHTML: row.querySelector('td:nth-child(3)').innerHTML.trim(),
+                    valorTexto: row.querySelector('td:nth-child(4)').textContent.trim(),
+                    parcelaHTML: row.querySelector('td:nth-child(5)').innerHTML.trim(),
+                    tipoHTML: row.querySelector('td:nth-child(6)').innerHTML.trim(),
+                    pago: row.querySelector('td:nth-child(7)').textContent.includes('☑')
+                }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(gastos));
+            } catch(e) {
+                console.error('Erro ao salvar no storage', e);
+            }
         }
 
+        function carregarDoStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const gastos = JSON.parse(raw);
+                const tbody = document.getElementById('tabelaGastos');
+                tbody.innerHTML = '';
+                gastos.forEach(g => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td data-label="Data">${g.data}</td>
+                        <td data-label="Descrição">${escapeHtml(g.descricao)}</td>
+                        <td data-label="Categoria">${g.categoriaHTML}</td>
+                        <td data-label="Valor">${g.valorTexto}</td>
+                        <td data-label="Parcela">${g.parcelaHTML}</td>
+                        <td data-label="Tipo">${g.tipoHTML}</td>
+                        <td data-label="Pago?" class="checkbox-cell">${g.pago ? '☑' : '☐'}</td>
+                        <td data-label="Status">${g.pago ? '<span class="status-pago">Pago</span>' : '<span class="status-pendente">Pendente</span>'}</td>
+                        <td data-label="Ação"><button onclick="deletarGasto(this)" class="small">✕</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(e) {
+                console.error('Erro ao carregar do storage', e);
+            }
+        }
+
+        // --- EXPORT CSV ---
+        function exportarCSV() {
+            const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'))
+                .filter(tr => tr.style.display !== 'none');
+            if (rows.length === 0) { alert('Não há gastos para exportar.'); return; }
+            const csv = [];
+            csv.push(['Data','Descrição','Categoria','Valor','Parcela','Tipo','Pago','Status'].join(','));
+            rows.forEach(row => {
+                const cols = [
+                    row.querySelector('td:nth-child(1)').textContent.trim(),
+                    `"${row.querySelector('td:nth-child(2)').textContent.trim()}"`,
+                    row.querySelector('td:nth-child(3)').textContent.trim(),
+                    row.querySelector('td:nth-child(4)').textContent.trim(),
+                    row.querySelector('td:nth-child(5)').textContent.trim(),
+                    row.querySelector('td:nth-child(6)').textContent.trim(),
+                    row.querySelector('td:nth-child(7)').textContent.includes('☑') ? 'Sim' : 'Não',
+                    row.querySelector('td:nth-child(8)').textContent.trim()
+                ];
+                csv.push(cols.join(','));
+            });
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gastos_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // --- BUSCA (filtro rápido por descrição) ---
+        document.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'buscaGastos') {
+                const q = e.target.value.toLowerCase();
+                document.querySelectorAll('#tabelaGastos tr').forEach(tr => {
+                    const desc = tr.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    tr.style.display = desc.includes(q) ? '' : 'none';
+                });
+            }
+        });
+
+        // --- TEMA (claro/escuro) ---
+        const TEMA_KEY = 'temaEscuro_v1';
+        document.getElementById('toggleTema').addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem(TEMA_KEY, document.body.classList.contains('dark'));
+        });
+
+        function carregarTema() {
+            if (localStorage.getItem(TEMA_KEY) === 'true') document.body.classList.add('dark');
+        }
+
+        // --- GRÁFICO (Chart.js) ---
         function atualizarGrafico(valFixo, valCompras) {
             const chartErrorEl = document.getElementById('chartError');
             if (typeof Chart === 'undefined') {
                 chartErrorEl.style.display = 'block';
-                chartErrorEl.textContent = 'Biblioteca Chart.js não carregada. Verifique sua conexão ou bloqueadores (adblock/CSP).';
+                chartErrorEl.textContent = 'Biblioteca Chart.js não carregada.';
                 return;
             } else {
                 chartErrorEl.style.display = 'none';
@@ -812,26 +632,32 @@
 
             const ctx = document.getElementById('gastosChart').getContext('2d');
             const data = {
-                labels: ['Fixos', 'Compras'],
+                labels: ['Fixos','Compras'],
                 datasets: [{
                     data: [valFixo, valCompras],
-                    backgroundColor: ['#ec4899', '#fcd34d'],
-                    hoverBackgroundColor: ['#db2777', '#f59e0b'],
+                    backgroundColor: ['#ec4899','#fcd34d'],
+                    hoverBackgroundColor: ['#db2777','#f59e0b'],
                     borderWidth: 0
                 }]
             };
 
-            const configOptions = {
-                responsive: true,
-                maintainAspectRatio: true, // deixamos true para Chart.js usar aspectRatio
-                aspectRatio: calcularAspectRatio(),
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const val = context.raw || 0;
-                                return context.label + ': R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const asp = calcularAspectRatio();
+
+            const config = {
+                type: 'doughnut',
+                data,
+                options: {
+                    responsive:true,
+                    maintainAspectRatio:true,
+                    aspectRatio:asp,
+                    plugins: {
+                        legend:{ position:'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    return context.label + ': R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits:2 });
+                                }
                             }
                         }
                     }
@@ -840,30 +666,40 @@
 
             if (gastosChart) {
                 gastosChart.data = data;
-                gastosChart.options.plugins = configOptions.plugins;
-                gastosChart.options.maintainAspectRatio = configOptions.maintainAspectRatio;
-                gastosChart.options.aspectRatio = configOptions.aspectRatio;
-                try { gastosChart.update(); } catch (e) { /* fallback silencioso */ }
+                gastosChart.options.aspectRatio = asp;
+                try { gastosChart.update(); } catch(e) {}
                 return;
             }
 
-            gastosChart = new Chart(ctx, {
-                type: 'doughnut',
-                data,
-                options: configOptions
-            });
+            gastosChart = new Chart(ctx, config);
         }
 
-        // atualiza aspectRatio ao redimensionar janela
+        function calcularAspectRatio() {
+            const wrapper = document.getElementById('chartWrapper');
+            const w = wrapper ? wrapper.clientWidth : window.innerWidth;
+            let targetHeight = 320;
+            if (w < 420) targetHeight = 220;
+            else if (w < 700) targetHeight = 280;
+            else targetHeight = 320;
+            return w / targetHeight;
+        }
+
         window.addEventListener('resize', () => {
-            if (!gastosChart) return;
-            const asp = calcularAspectRatio();
-            gastosChart.options.aspectRatio = asp;
-            try { gastosChart.resize(); gastosChart.update(); } catch (e) {}
+            if (gastosChart) {
+                gastosChart.options.aspectRatio = calcularAspectRatio();
+                try { gastosChart.resize(); gastosChart.update(); } catch(e) {}
+            }
         });
 
-        // inicializa os totais quando DOM pronto
+        // --- UTIL / INIT ---
         document.addEventListener('DOMContentLoaded', () => {
+            // set month select to current month by default
+            const hoje = new Date();
+            const sel = document.getElementById('mesSelect');
+            if (sel) sel.value = hoje.getMonth();
+
+            carregarTema();
+            carregarDoStorage();
             atualizarTotais();
         });
     </script>

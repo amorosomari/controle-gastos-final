@@ -74,6 +74,10 @@
     }
 
     .small{font-size:.85rem;padding:6px 8px}
+
+    /* focus for checkbox-cell (since it's now focusable) */
+    .checkbox-cell[tabindex] { outline: none; }
+    .checkbox-cell:focus { box-shadow: 0 0 0 4px rgba(236,72,153,0.12); border-radius:4px; }
   </style>
 </head>
 <body>
@@ -147,7 +151,8 @@
             <tr>
               <td data-label="Data">2026-01-01</td><td data-label="Descrição">Aluguel</td><td data-label="Categoria"><span class="categoria-fixo">Fixo</span></td>
               <td data-label="Valor">R$ 1.500,00</td><td data-label="Parcela"><span class="parcela-info">1/1</span></td><td data-label="Tipo"><span class="tipo-recorrente">Recorrente</span></td>
-              <td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td><td data-label="Status"><span class="status-pendente">Pendente</span></td>
+              <td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>
+              <td data-label="Status"><span class="status-pendente">Pendente</span></td>
               <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>
             </tr>
           </tbody></table>
@@ -204,14 +209,7 @@
   <script>
     /* ---------- util ---------- */
     function escapeHtml(s){ return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]) }
-
-    function parseDateText(text){
-      if(!text) return null;
-      text=text.trim();
-      if(/^\d{4}-\d{2}-\d{2}$/.test(text)) return new Date(text);
-      if(/^\d{2}\/\d{2}\/\d{4}$/.test(text)){ const p=text.split('/'); return new Date(+p[2],+p[1]-1,+p[0]); }
-      const d=new Date(text); return isNaN(d)?null:d;
-    }
+    function parseDateText(text){ if(!text) return null; text=text.trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(text)) return new Date(text); if(/^\d{2}\/\d{2}\/\d{4}$/.test(text)){ const p=text.split('/'); return new Date(+p[2],+p[1]-1,+p[0]); } const d=new Date(text); return isNaN(d)?null:d }
     function startOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0) }
     function endOfDay(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate(),23,59,59,999) }
 
@@ -282,7 +280,9 @@
         const newP={ id:'p_'+Date.now().toString(36), name, start, end };
         periods.push(newP);
       }
-      savePeriods(periods); populatePeriodManager(); populatePeriodSelect();
+      savePeriods(periods);
+      populatePeriodManager();
+      populatePeriodSelect();
       idField.value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value='';
     }
 
@@ -299,8 +299,11 @@
 
     function deletePeriod(id){
       if(!confirm('Apagar este período?')) return;
-      let periods=loadPeriods(); periods=periods.filter(p=>p.id!==id); savePeriods(periods);
-      populatePeriodManager(); populatePeriodSelect();
+      let periods=loadPeriods();
+      periods=periods.filter(p=>p.id!==id);
+      savePeriods(periods);
+      populatePeriodManager();
+      populatePeriodSelect();
     }
 
     function onPeriodChange(){ filtrarLinhas(); }
@@ -362,11 +365,21 @@
       if(tabName==='graficos'){ setTimeout(()=>{ if(typeof Chart==='undefined'){ document.getElementById('chartError').style.display='block'; document.getElementById('chartError').textContent='Chart.js não carregado'; return } document.getElementById('chartError').style.display='none'; if(gastosChart){ try{gastosChart.resize();gastosChart.update()}catch(e){atualizarTotais()} } else atualizarTotais() },120) }
     }
 
+    // Toggle paid state and update title for tooltip + aria-pressed
     function marcarPago(cell){
       const checkbox = cell.textContent.trim();
       const statusCell = cell.closest('tr').querySelector('td:nth-child(8)');
-      if(checkbox==='☐'){ cell.textContent='☑'; if(statusCell) statusCell.innerHTML='<span class="status-pago">Pago</span>' }
-      else { cell.textContent='☐'; if(statusCell) statusCell.innerHTML='<span class="status-pendente">Pendente</span>' }
+      if (checkbox === '☐') {
+        cell.textContent = '☑';
+        if (statusCell) statusCell.innerHTML = '<span class="status-pago">Pago</span>';
+        cell.title = 'Marcar como pendente';
+        cell.setAttribute('aria-pressed', 'true');
+      } else {
+        cell.textContent = '☐';
+        if (statusCell) statusCell.innerHTML = '<span class="status-pendente">Pendente</span>';
+        cell.title = 'Marcar como pago';
+        cell.setAttribute('aria-pressed', 'false');
+      }
       salvarNoStorage(); atualizarTotais();
     }
 
@@ -390,7 +403,9 @@
       else catSpan=`<span class="categoria-compras">${escapeHtml(cat)}</span>`;
       const tipo = parcelas>1?'<span class="tipo-parcelado">Parcelado</span>':'<span class="tipo-recorrente">Único</span>';
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td data-label="Data">${data}</td><td data-label="Descrição">${escapeHtml(desc)}</td><td data-label="Categoria">${catSpan}</td><td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td data-label="Parcela"><span class="parcela-info">1/${parcelas}</span></td><td data-label="Tipo">${tipo}</td><td data-label="Pago?" class="checkbox-cell" onclick="marcarPago(this)">☐</td><td data-label="Status"><span class="status-pendente">Pendente</span></td><td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
+      // checkbox cell includes onclick, onkeydown, role, tabindex and initial title
+      const checkboxCell = `<td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>`;
+      tr.innerHTML=`<td data-label="Data">${data}</td><td data-label="Descrição">${escapeHtml(desc)}</td><td data-label="Categoria">${catSpan}</td><td data-label="Valor">R$ ${parseFloat(valorParcela).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td data-label="Parcela"><span class="parcela-info">1/${parcelas}</span></td><td data-label="Tipo">${tipo}</td>${checkboxCell}<td data-label="Status"><span class="status-pendente">Pendente</span></td><td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
       document.getElementById('tabelaGastos').appendChild(tr);
       document.getElementById('inputData').value=''; document.getElementById('inputDesc').value=''; document.getElementById('inputCat').value=''; document.getElementById('inputVal').value=''; document.getElementById('inputParcelas').value='1';
       salvarNoStorage(); filtrarLinhas();
@@ -446,7 +461,19 @@
         const tbody=document.getElementById('tabelaGastos'); tbody.innerHTML='';
         gastos.forEach(g=>{
           const tr=document.createElement('tr');
-          tr.innerHTML=`<td data-label="Data">${g.data}</td><td data-label="Descrição">${escapeHtml(g.descricao)}</td><td data-label="Categoria">${g.categoriaHTML}</td><td data-label="Valor">${g.valorTexto}</td><td data-label="Parcela">${g.parcelaHTML}</td><td data-label="Tipo">${g.tipoHTML}</td><td data-label="Pago?" class="checkbox-cell">${g.pago?'☑':'☐'}</td><td data-label="Status">${g.pago?'<span class="status-pago">Pago</span>':'<span class="status-pendente">Pendente</span>'}</td><td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
+          // include clickable, keyboard accessible checkbox cell and title that reflects saved state
+          const paid = g.pago ? '☑' : '☐';
+          const title = g.pago ? 'Marcar como pendente' : 'Marcar como pago';
+          // build row with checkbox cell that has onclick/onkeydown/role/tabindex and title
+          tr.innerHTML = `<td data-label="Data">${g.data}</td>
+                          <td data-label="Descrição">${escapeHtml(g.descricao)}</td>
+                          <td data-label="Categoria">${g.categoriaHTML}</td>
+                          <td data-label="Valor">${g.valorTexto}</td>
+                          <td data-label="Parcela">${g.parcelaHTML}</td>
+                          <td data-label="Tipo">${g.tipoHTML}</td>
+                          <td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="${title}">${paid}</td>
+                          <td data-label="Status">${g.pago ? '<span class="status-pago">Pago</span>' : '<span class="status-pendente">Pendente</span>'}</td>
+                          <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
           tbody.appendChild(tr);
         });
       }catch(e){console.error(e)}
@@ -496,28 +523,16 @@
     window.addEventListener('resize',()=>{ if(gastosChart){ gastosChart.options.aspectRatio=calcularAspectRatio(); try{gastosChart.resize();gastosChart.update()}catch(e){} } })
 
     // periods UI init
-    function populateYearOptions(){
-      const sel=document.getElementById('anoSelect'); sel.innerHTML='';
-      const today=new Date(); const currentYear=today.getFullYear();
-      for(let y=currentYear-1;y<=currentYear+2;y++){ const opt=document.createElement('option'); opt.value=y; opt.textContent=y; sel.appendChild(opt) }
-      sel.value=currentYear;
-    }
-    function populatePeriodSelect(){
-      const sel=document.getElementById('periodSelect'); const cur=sel.value; sel.innerHTML='<option value="none">Nenhum (usar Fatura)</option>'; const periods=loadPeriods(); periods.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} — ${p.start} → ${p.end}`; sel.appendChild(o) }); if(Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur; else sel.value='none'
-    }
+    function populateYearOptions(){ const sel=document.getElementById('anoSelect'); sel.innerHTML=''; const today=new Date(); const currentYear=today.getFullYear(); for(let y=currentYear-1;y<=currentYear+2;y++){ const opt=document.createElement('option'); opt.value=y; opt.textContent=y; sel.appendChild(opt) } sel.value=currentYear }
+    function populatePeriodSelect(){ const sel=document.getElementById('periodSelect'); const cur=sel.value; sel.innerHTML='<option value="none">Nenhum (usar Fatura)</option>'; const periods=loadPeriods(); periods.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} — ${p.start} → ${p.end}`; sel.appendChild(o) }); if(Array.from(sel.options).some(o=>o.value===cur)) sel.value=cur; else sel.value='none' }
 
-    function init(){
-      populateYearOptions(); populatePeriodSelect(); carregarTema(); carregarDoStorage();
-      const hoje=new Date(); document.getElementById('mesSelect').value=hoje.getMonth();
-      filtrarLinhas();
-      document.addEventListener('keydown',e=>{ if(e.key==='Escape') closePeriodManager() })
-    }
+    function init(){ populateYearOptions(); populatePeriodSelect(); carregarTema(); carregarDoStorage(); const hoje=new Date(); document.getElementById('mesSelect').value=hoje.getMonth(); filtrarLinhas(); document.addEventListener('keydown',e=>{ if(e.key==='Escape') closePeriodManager() }) }
 
     // period modal helpers referenced earlier
     function loadPeriods(){ try{ const raw=localStorage.getItem(PERIODS_KEY); return raw?JSON.parse(raw):[] }catch(e){console.error(e);return[]} }
     function savePeriods(arr){ localStorage.setItem(PERIODS_KEY,JSON.stringify(arr)) }
     function addPeriodToListEl(period){ const div=document.createElement('div'); div.className='period-item'; div.dataset.id=period.id; div.innerHTML=`<div><div style="font-weight:700">${escapeHtml(period.name)}</div><div class="meta">${period.start} — ${period.end}</div></div><div style="display:flex;gap:8px"><button class="btn-ghost" onclick="editPeriod('${period.id}')">Editar</button><button class="btn-ghost" onclick="deletePeriod('${period.id}')">Apagar</button></div>`; return div }
-    function populatePeriodManager(){ const list = document.getElementById('periodList'); list.innerHTML=''; const periods = loadPeriods(); if(periods.length===0){ list.innerHTML='<div style="padding:8px;color:#666">Nenhum período salvo ainda.</div>'; return } periods.forEach(p=>list.appendChild(addPeriodToListEl(p))) }
+    function populatePeriodManager(){ const list = document.getElementById('periodList'); list.innerHTML=''; const periods = loadPeriods(); if(periods.length===0){ list.innerHTML='<div style="padding:8px;color:#666'>Nenhum período salvo ainda.</div>'; return } periods.forEach(p=>list.appendChild(addPeriodToListEl(p))) }
     function openPeriodManager(){ populatePeriodManager(); document.getElementById('periodId').value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value=''; document.getElementById('periodModal').style.display='flex' }
     function closePeriodManager(){ document.getElementById('periodModal').style.display='none'; populatePeriodSelect() }
     function savePeriod(){ const idField=document.getElementById('periodId'); const name=document.getElementById('periodName').value.trim(); const start=document.getElementById('periodStart').value; const end=document.getElementById('periodEnd').value; if(!name||!start||!end){ alert('Preencha nome, início e fim do período'); return } const periods=loadPeriods(); if(idField.value){ const idx=periods.findIndex(p=>p.id===idField.value); if(idx!==-1){ periods[idx].name=name; periods[idx].start=start; periods[idx].end=end } } else { const newP={ id:'p_'+Date.now().toString(36), name, start, end }; periods.push(newP) } savePeriods(periods); populatePeriodManager(); populatePeriodSelect(); idField.value=''; document.getElementById('periodName').value=''; document.getElementById('periodStart').value=''; document.getElementById('periodEnd').value='' }

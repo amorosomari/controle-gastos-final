@@ -57,4 +57,103 @@
     .categoria-saldo{background:#d1fae5;color:#065f46;padding:4px 10px;border-radius:8px;font-weight:700}
     .parcela-info{background:#e9d5ff;padding:6px 8px;border-radius:6px;font-weight:600;color:#6b21a8}
     .tipo-parcelado{background:#c084fc;color:white;padding:4px 8px;border-radius:6px;font-weight:600}
-    .tipo-recorrente{backgr
+    .tipo-recorrente{background:#10b981;color:white;padding:4px 8px;border-radius:6px;font-weight:600}
+    .status-pago{background:#d1fae5;color:#065f46;padding:4px 8px;border-radius:6px;font-weight:600}
+    .status-pendente{background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:600}
+    
+    .summary-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:8px}
+    .summary-card{background:linear-gradient(135deg,#fce7f3 0%, #fbcfe8 100%);padding:14px;border-radius:10px;border-left:6px solid var(--accent);box-shadow:0 8px 20px rgba(236,72,153,0.06)}
+    .chart-container{background:white;padding:14px;border-radius:12px;margin:16px 0;border:1px solid #f9a8d4;text-align:center;display:flex;flex-direction:column;gap:8px}
+    footer{text-align:center;padding:18px;color:#999;font-size:.9rem;background:#faf5ff;border-top:1px solid #f9a8d4}
+
+    /* Modal (mantido) */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{background:white;padding:16px;border-radius:10px;max-width:720px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}
+    .modal h3{margin-bottom:8px;color:var(--accent)}
+    .period-list{max-height:220px;overflow:auto;margin-bottom:8px;border:1px solid #eee;padding:8px;border-radius:8px}
+    .period-item{display:flex;justify-content:space-between;padding:8px;border-bottom:1px dashed #eee;align-items:center}
+    .period-item:last-child{border-bottom:none}
+    .period-item .meta{font-size:.9rem;color:#444}
+    .modal form{display:grid;grid-template-columns:1fr 1fr 160px;gap:8px}
+    .modal form input, .modal form button{padding:8px;border-radius:6px}
+    .modal .actions{margin-top:10px;display:flex;gap:8px;justify-content:flex-end}
+    .btn-ghost{background:transparent;border:1px solid #ddd;padding:8px;border-radius:6px;cursor:pointer}
+    
+    /* Checkbox acessível melhorado */
+    .checkbox-cell{padding:8px 4px;cursor:pointer}
+    .checkbox-cell:focus{box-shadow:0 0 0 4px rgba(236,72,153,0.12);border-radius:4px}
+    
+    @media (max-width:800px){
+      .modal form{grid-template-columns:1fr}
+      thead{display:none}
+      table,tbody,tr,td{display:block;width:100%}
+      tr{margin-bottom:10px;padding:12px;border-radius:10px;background:white;border:1px solid #f3e8f5}
+      td{padding:8px 6px;border-bottom:none;display:flex;justify-content:space-between;align-items:center}
+      td::before{content:attr(data-label);color:var(--muted);font-weight:700;margin-right:8px;flex:0 0 auto}
+      td > *{flex:1 1 auto;text-align:right}
+      /* Sticky não funciona bem em mobile table-block */
+      th:nth-child(1), td:nth-child(1){position:static}
+      .toolbar{gap:6px}
+      .form-group{padding:12px}
+      .chart-container{padding:12px}
+      footer{font-size:.8rem}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>📅 Controle de Gastos por Fatura</h1><p>Registre seus recebimentos e gastos por fatura do cartão</p></div>
+    <div class="content">
+      <div class="tabs" role="tablist" aria-label="Navegação principal">
+        <button class="tab-btn active" onclick="switchTab('gastos', this)">📊 Meus Gastos</button>
+        <button class="tab-btn" onclick="switchTab('graficos', this)">📈 Análise Anual</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="left">
+          <label>Período:</label>
+          <select id="periodSelect" onchange="onPeriodChange()">
+            <option value="none">Nenhum (usar Fatura)</option>
+          </select>
+          <button class="secondary small" onclick="openPeriodManager()">Gerenciar Períodos</button>
+
+          <label>Fatura:</label>
+          <select id="mesSelect" onchange="filtrarLinhas()">
+            <option value="all">Todas</option>
+            <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+            <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+            <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+            <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
+          </select>
+
+          <label>Ano:</label>
+          <select id="anoSelect" onchange="filtrarLinhas()"></select>
+
+          <label>Dia fatura</label>
+          <input id="billingDay" type="number" min="1" max="31" value="26" style="width:80px" onchange="filtrarLinhas()">
+
+          <input id="buscaGastos" type="search" placeholder="Buscar descrição..." oninput="filtrarLinhas()">
+          <button class="secondary small" onclick="exportarCSV()">Exportar CSV</button>
+        </div>
+
+        <div class="right">
+          <button id="toggleTema" title="Alternar tema">🌙</button>
+          <button onclick="focusAdicionar()" class="small">+ Adicionar</button>
+        </div>
+      </div>
+
+      <div id="gastos" class="tab-content active">
+        <!-- Resumo do filtro -->
+        <div class="filter-summary" id="filterSummary" style="display:none">
+          Filtro ativo: <span id="filterText"></span> (<span id="filterCount">0</span> lançamentos)
+        </div>
+
+        <!-- Formulário adaptado -->
+        <div class="form-group">
+          <div><label for="inputData">Data</label><input type="date" id="inputData" autofocus></div>
+          <div><label for="inputDesc">Descrição</label><input type="text" id="inputDesc" placeholder="Ex: Aluguel"></div>
+          <div><label for="inputCat">Categoria</label>
+            <select id="inputCat">
+              <option value="">Selecione...</option>
+              <option value="Fixo">Fixo</option>
+             

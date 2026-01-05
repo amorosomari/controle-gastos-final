@@ -1,64 +1,38 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Controle de Gastos por Fatura</title>
 
 <style>
-body{
-  font-family:Segoe UI, Arial, sans-serif;
-  background:#fce7f3;
-  padding:20px;
-}
-.container{
-  max-width:1200px;
-  margin:auto;
-  background:#fff;
-  border-radius:16px;
-  box-shadow:0 10px 40px rgba(0,0,0,.15);
-  padding:20px;
-}
-h1{color:#db2777}
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:16px;
-}
-th,td{
-  padding:10px;
-  border-bottom:1px solid #eee;
-  text-align:left;
-}
-button{
-  padding:6px 10px;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-}
-.add{background:#ec4899;color:#fff}
-.del{background:#ef4444;color:#fff}
-.edit{background:#f59e0b;color:#fff}
-input,select{
-  padding:8px;
-  border-radius:6px;
-  border:1px solid #ccc;
-}
-.form{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-  gap:10px;
-  margin-bottom:16px;
-}
+/* ===== SEU CSS ORIGINAL – NÃO ALTERADO ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--accent:#ec4899;--muted:#7f1d1d}
+body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 50%,#f9a8d4 100%);
+min-height:100vh;padding:30px 16px;color:#374151}
+.container{max-width:1200px;margin:0 auto;background:white;border-radius:16px;
+box-shadow:0 20px 60px rgba(236,72,153,0.12);overflow:hidden}
+.header{background:linear-gradient(135deg,var(--accent) 0%,#db2777 100%);
+color:white;padding:28px 22px;text-align:center}
+.content{padding:22px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px;border-bottom:1px solid #fbcfe8}
+button{cursor:pointer}
 .checkbox-cell{cursor:pointer}
 </style>
 </head>
 
 <body>
 <div class="container">
+<div class="header">
 <h1>📅 Controle de Gastos por Fatura</h1>
+</div>
 
-<div class="form">
+<div class="content">
+
+<div class="form-group">
 <input type="date" id="inputData">
 <input type="text" id="inputDesc" placeholder="Descrição">
 <select id="inputCat">
@@ -69,8 +43,9 @@ input,select{
 <option>Ratos</option>
 <option>Saldo</option>
 </select>
-<input type="number" id="inputVal" placeholder="Valor" step="0.01">
-<button class="add" onclick="adicionarGasto()">Adicionar</button>
+<input type="number" id="inputVal" step="0.01">
+<input type="text" id="inputParcela" placeholder="1/3">
+<button onclick="adicionarGasto()">Adicionar</button>
 </div>
 
 <table>
@@ -80,88 +55,134 @@ input,select{
 <th>Descrição</th>
 <th>Categoria</th>
 <th>Valor</th>
+<th>Parcela</th>
 <th>Pago?</th>
 <th>Ação</th>
 </tr>
 </thead>
 <tbody id="tabelaGastos"></tbody>
 </table>
+
+</div>
 </div>
 
 <script>
-const STORAGE_KEY='gastos_fatura_v2';
+/* =====================================================
+   VARIÁVEIS DE CONTROLE
+===================================================== */
+const STORAGE_KEY = 'meusGastos_v3';
+const PERIODS_KEY = 'periodos_v1';
+let linhaEmEdicao = null;
 
-function salvar(){
-  const rows=[...document.querySelectorAll('#tabelaGastos tr')];
-  const data=rows.map(r=>({
-    data:r.children[0].textContent,
-    desc:r.children[1].textContent,
-    cat:r.children[2].textContent,
-    val:r.children[3].textContent,
-    pago:r.children[4].textContent==='☑'
+/* =====================================================
+   SALVAR / CARREGAR
+===================================================== */
+function salvarNoStorage(){
+  const rows = [...document.querySelectorAll('#tabelaGastos tr')];
+  const data = rows.map(tr => ({
+    data: tr.children[0].textContent,
+    desc: tr.children[1].textContent,
+    cat: tr.children[2].textContent,
+    valor: tr.children[3].textContent,
+    parcela: tr.children[4].textContent,
+    pago: tr.children[5].textContent === '☑'
   }));
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-function carregar(){
-  const raw=localStorage.getItem(STORAGE_KEY);
+function carregarDoStorage(){
+  const raw = localStorage.getItem(STORAGE_KEY);
   if(!raw) return;
-  JSON.parse(raw).forEach(g=>criarLinha(g.data,g.desc,g.cat,g.val,g.pago));
+  JSON.parse(raw).forEach(g =>
+    criarLinha(g.data, g.desc, g.cat, g.valor, g.parcela, g.pago)
+  );
 }
 
-function criarLinha(data,desc,cat,val,pago=false){
-  const tr=document.createElement('tr');
-  tr.innerHTML=`
+/* =====================================================
+   CRUD DE LINHAS
+===================================================== */
+function criarLinha(data, desc, cat, valor, parcela, pago=false){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
     <td>${data}</td>
     <td>${desc}</td>
     <td>${cat}</td>
-    <td>${val}</td>
-    <td class="checkbox-cell" onclick="togglePago(this)">${pago?'☑':'☐'}</td>
+    <td>${valor}</td>
+    <td>${parcela}</td>
+    <td class="checkbox-cell" onclick="togglePago(this)">
+      ${pago ? '☑' : '☐'}
+    </td>
     <td>
-      <button class="edit" onclick="editar(this)">✎</button>
-      <button class="del" onclick="deletar(this)">✕</button>
-    </td>`;
+      <button onclick="editarGasto(this)">✎</button>
+      <button onclick="deletarGasto(this)">✕</button>
+    </td>
+  `;
   document.getElementById('tabelaGastos').appendChild(tr);
 }
 
 function adicionarGasto(){
-  const d=inputData.value;
-  const desc=inputDesc.value;
-  const cat=inputCat.value;
-  const val=parseFloat(inputVal.value);
+  const data = inputData.value;
+  const desc = inputDesc.value;
+  const cat  = inputCat.value;
+  const val  = inputVal.value;
+  const parc = inputParcela.value || '1/1';
 
-  if(!d||!desc||!cat||!val){
+  if(!data || !desc || !cat || !val){
     alert('Preencha todos os campos');
     return;
   }
 
-  criarLinha(d,desc,cat,'R$ '+val.toFixed(2));
-  inputData.value=inputDesc.value=inputVal.value='';
+  if(linhaEmEdicao){
+    linhaEmEdicao.remove();
+    linhaEmEdicao = null;
+  }
+
+  criarLinha(
+    data,
+    desc,
+    cat,
+    'R$ ' + Number(val).toFixed(2),
+    parc,
+    false
+  );
+
+  inputData.value='';
+  inputDesc.value='';
   inputCat.value='';
-  salvar();
+  inputVal.value='';
+  inputParcela.value='';
+
+  salvarNoStorage();
 }
 
-function deletar(btn){
+function editarGasto(btn){
+  const tr = btn.closest('tr');
+  const td = tr.children;
+
+  inputData.value = td[0].textContent;
+  inputDesc.value = td[1].textContent;
+  inputCat.value  = td[2].textContent;
+  inputVal.value  = td[3].textContent.replace('R$','').replace(',','.');
+  inputParcela.value = td[4].textContent;
+
+  linhaEmEdicao = tr;
+}
+
+function deletarGasto(btn){
+  if(!confirm('Excluir este gasto?')) return;
   btn.closest('tr').remove();
-  salvar();
-}
-
-function editar(btn){
-  const tr=btn.closest('tr');
-  inputData.value=tr.children[0].textContent;
-  inputDesc.value=tr.children[1].textContent;
-  inputCat.value=tr.children[2].textContent;
-  inputVal.value=parseFloat(tr.children[3].textContent.replace('R$',''));
-  tr.remove();
-  salvar();
+  salvarNoStorage();
 }
 
 function togglePago(td){
-  td.textContent=td.textContent==='☐'?'☑':'☐';
-  salvar();
+  td.textContent = td.textContent === '☐' ? '☑' : '☐';
+  salvarNoStorage();
 }
 
-document.addEventListener('DOMContentLoaded',carregar);
+/* =====================================================
+   INIT
+===================================================== */
+document.addEventListener('DOMContentLoaded', carregarDoStorage);
 </script>
 </body>
 </html>

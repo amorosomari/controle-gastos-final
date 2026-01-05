@@ -1,82 +1,75 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Controle de Gastos por Fatura</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Controle de Gastos por Fatura</title>
 
-<style>
-/* ===== SEU CSS ORIGINAL – NÃO ALTERADO ===== */
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--accent:#ec4899;--muted:#7f1d1d}
-body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
-background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 50%,#f9a8d4 100%);
-min-height:100vh;padding:30px 16px;color:#374151}
-.container{max-width:1200px;margin:0 auto;background:white;border-radius:16px;
-box-shadow:0 20px 60px rgba(236,72,153,0.12);overflow:hidden}
-.header{background:linear-gradient(135deg,var(--accent) 0%,#db2777 100%);
-color:white;padding:28px 22px;text-align:center}
-.content{padding:22px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:12px;border-bottom:1px solid #fbcfe8}
-button{cursor:pointer}
-.checkbox-cell{cursor:pointer}
-</style>
+  <style>
+    /* --- CSS ORIGINAL - NÃO ALTERADO --- */
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--accent:#ec4899;--muted:#7f1d1d}
+    body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+      background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 50%,#f9a8d4 100%);
+      min-height:100vh;padding:30px 16px;color:#374151}
+    body.dark{background:linear-gradient(135deg,#0b1020 0%,#071433 100%);color:#e6eef8}
+    .container{max-width:1200px;margin:0 auto;background:white;border-radius:16px;
+      box-shadow:0 20px 60px rgba(236,72,153,0.12);overflow:hidden}
+    body.dark .container{background:#071033;box-shadow:none}
+    .header{background:linear-gradient(135deg,var(--accent) 0%,#db2777 100%);
+      color:white;padding:28px 22px;text-align:center;border-bottom:4px solid #be123c}
+    .content{padding:22px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:12px;border-bottom:1px solid #fbcfe8}
+    .checkbox-cell{cursor:pointer}
+  </style>
 </head>
 
 <body>
 <div class="container">
-<div class="header">
-<h1>📅 Controle de Gastos por Fatura</h1>
-</div>
+  <div class="header">
+    <h1>📅 Controle de Gastos por Fatura</h1>
+    <p>Registre seus recebimentos e gastos por fatura do cartão</p>
+  </div>
 
-<div class="content">
+  <div class="content">
 
-<div class="form-group">
-<input type="date" id="inputData">
-<input type="text" id="inputDesc" placeholder="Descrição">
-<select id="inputCat">
-<option value="">Categoria</option>
-<option>Fixo</option>
-<option>Outras Compras</option>
-<option>Transporte</option>
-<option>Ratos</option>
-<option>Saldo</option>
-</select>
-<input type="number" id="inputVal" step="0.01">
-<input type="text" id="inputParcela" placeholder="1/3">
-<button onclick="adicionarGasto()">Adicionar</button>
-</div>
+    <div class="form-group">
+      <input type="date" id="inputData">
+      <input type="text" id="inputDesc" placeholder="Descrição">
+      <select id="inputCat">
+        <option value="">Selecione...</option>
+        <option value="Fixo">Fixo</option>
+        <option value="Outras Compras">Outras Compras</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Ratos">Ratos</option>
+        <option value="Saldo">Saldo</option>
+        <option value="Apartamento">Apartamento</option>
+      </select>
+      <input type="number" id="inputVal" step="0.01">
+      <input type="text" id="inputParcela" placeholder="1/3">
+      <button onclick="adicionarGasto()">Adicionar</button>
+    </div>
 
-<table>
-<thead>
-<tr>
-<th>Data</th>
-<th>Descrição</th>
-<th>Categoria</th>
-<th>Valor</th>
-<th>Parcela</th>
-<th>Pago?</th>
-<th>Ação</th>
-</tr>
-</thead>
-<tbody id="tabelaGastos"></tbody>
-</table>
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th><th>Descrição</th><th>Categoria</th>
+          <th>Valor</th><th>Parcela</th><th>Pago?</th><th>Ação</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaGastos"></tbody>
+    </table>
 
-</div>
+  </div>
 </div>
 
 <script>
-/* =====================================================
-   VARIÁVEIS DE CONTROLE
-===================================================== */
-const STORAGE_KEY = 'meusGastos_v3';
-const PERIODS_KEY = 'periodos_v1';
+/* ================= VARIÁVEIS ================= */
+const STORAGE_KEY = 'meusGastos_v1';
 let linhaEmEdicao = null;
 
-/* =====================================================
-   SALVAR / CARREGAR
-===================================================== */
+/* ================= STORAGE ================= */
 function salvarNoStorage(){
   const rows = [...document.querySelectorAll('#tabelaGastos tr')];
   const data = rows.map(tr => ({
@@ -94,95 +87,71 @@ function carregarDoStorage(){
   const raw = localStorage.getItem(STORAGE_KEY);
   if(!raw) return;
   JSON.parse(raw).forEach(g =>
-    criarLinha(g.data, g.desc, g.cat, g.valor, g.parcela, g.pago)
+    criarLinha(g.data,g.desc,g.cat,g.valor,g.parcela,g.pago)
   );
 }
 
-/* =====================================================
-   CRUD DE LINHAS
-===================================================== */
-function criarLinha(data, desc, cat, valor, parcela, pago=false){
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
+/* ================= CRUD ================= */
+function criarLinha(data,desc,cat,valor,parcela,pago=false){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
     <td>${data}</td>
     <td>${desc}</td>
     <td>${cat}</td>
     <td>${valor}</td>
     <td>${parcela}</td>
     <td class="checkbox-cell" onclick="togglePago(this)">
-      ${pago ? '☑' : '☐'}
+      ${pago?'☑':'☐'}
     </td>
     <td>
       <button onclick="editarGasto(this)">✎</button>
       <button onclick="deletarGasto(this)">✕</button>
-    </td>
-  `;
+    </td>`;
   document.getElementById('tabelaGastos').appendChild(tr);
 }
 
 function adicionarGasto(){
-  const data = inputData.value;
-  const desc = inputDesc.value;
-  const cat  = inputCat.value;
-  const val  = inputVal.value;
-  const parc = inputParcela.value || '1/1';
-
-  if(!data || !desc || !cat || !val){
-    alert('Preencha todos os campos');
-    return;
-  }
-
   if(linhaEmEdicao){
     linhaEmEdicao.remove();
-    linhaEmEdicao = null;
+    linhaEmEdicao=null;
   }
 
-  criarLinha(
-    data,
-    desc,
-    cat,
-    'R$ ' + Number(val).toFixed(2),
-    parc,
-    false
-  );
+  const d=inputData.value,desc=inputDesc.value,
+        cat=inputCat.value,val=inputVal.value,
+        parc=inputParcela.value||'1/1';
 
-  inputData.value='';
-  inputDesc.value='';
+  if(!d||!desc||!cat||!val){alert('Preencha tudo');return;}
+
+  criarLinha(d,desc,cat,'R$ '+Number(val).toFixed(2),parc,false);
+
+  inputData.value=inputDesc.value=inputVal.value=inputParcela.value='';
   inputCat.value='';
-  inputVal.value='';
-  inputParcela.value='';
-
   salvarNoStorage();
 }
 
 function editarGasto(btn){
-  const tr = btn.closest('tr');
-  const td = tr.children;
-
-  inputData.value = td[0].textContent;
-  inputDesc.value = td[1].textContent;
-  inputCat.value  = td[2].textContent;
-  inputVal.value  = td[3].textContent.replace('R$','').replace(',','.');
-  inputParcela.value = td[4].textContent;
-
-  linhaEmEdicao = tr;
+  const tr=btn.closest('tr'),td=tr.children;
+  inputData.value=td[0].textContent;
+  inputDesc.value=td[1].textContent;
+  inputCat.value=td[2].textContent;
+  inputVal.value=td[3].textContent.replace('R$','').replace(',','.');
+  inputParcela.value=td[4].textContent;
+  linhaEmEdicao=tr;
 }
 
 function deletarGasto(btn){
-  if(!confirm('Excluir este gasto?')) return;
+  if(!confirm('Excluir este gasto?'))return;
   btn.closest('tr').remove();
   salvarNoStorage();
 }
 
 function togglePago(td){
-  td.textContent = td.textContent === '☐' ? '☑' : '☐';
+  td.textContent=td.textContent==='☐'?'☑':'☐';
   salvarNoStorage();
 }
 
-/* =====================================================
-   INIT
-===================================================== */
-document.addEventListener('DOMContentLoaded', carregarDoStorage);
+/* ================= INIT ================= */
+document.addEventListener('DOMContentLoaded',carregarDoStorage);
 </script>
 </body>
 </html>

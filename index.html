@@ -314,11 +314,134 @@
 
     /* ---------- Recorrências (fixos) ---------- */
   /* ========== RECORRÊNCIAS CONSERTADAS ========== */
-const RECURRING_KEY = 'recorrentes_v2'; // v2 para limpar cache antigo
+# CÓDIGO COMPLETO - FUNÇÕES DE RECORRÊNCIA CONSERTADAS
+
+## LOCALIZAR E DELETAR
+Procure por `const RECURRING_KEY = 'recorrentes_v1';` no seu código e delete **TUDO** até antes de `function adicionarGasto()`.
+
+---
+
+## COLAR EXATAMENTE ISTO:
+
+```javascript
+/* ---------- Recorrências (fixos) - VERSÃO CONSERTADA ---------- */
+const RECURRING_KEY = 'recorrentes_v2';
 
 function loadRecurringTemplates() {
   try {
-    const raw
+    const raw = localStorage.getItem(RECURRING_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error('Erro ao ler templates recorrentes', e);
+    return [];
+  }
+}
+
+function saveRecurringTemplates(arr) {
+  try {
+    localStorage.setItem(RECURRING_KEY, JSON.stringify(arr));
+  } catch (e) {
+    console.error('Erro ao salvar templates recorrentes', e);
+  }
+}
+
+function ensureRecurringTemplate(desc, catHTML, valorTexto, dateStr) {
+  const templates = loadRecurringTemplates();
+  const d = parseDateText(dateStr);
+  const day = d ? d.getDate() : null;
+  const key = `${desc}||${valorTexto}||${day}`;
+  let existing = templates.find(t => t.key === key);
+  if (existing) return existing;
+  
+  const tpl = {
+    id: 'r_' + Date.now().toString(36),
+    key,
+    descricao: desc,
+    categoriaHTML: catHTML,
+    valorTexto,
+    day,
+    start: dateStr
+  };
+  templates.push(tpl);
+  saveRecurringTemplates(templates);
+  return tpl;
+}
+
+function existsEntryForTemplateInMonth(tpl, year, month) {
+  const rows = Array.from(document.querySelectorAll('#tabelaGastos tr'));
+  return rows.some(r => {
+    if ((r.dataset.templateId || '') !== tpl.id) return false;
+    const dt = parseDateText(r.querySelector('td:nth-child(1)').textContent.trim());
+    return dt && dt.getFullYear() === year && dt.getMonth() === month;
+  });
+}
+
+function ensureRecurringEntries(start, end) {
+  if (!start || !end) return;
+  const templates = loadRecurringTemplates();
+  if (!templates || templates.length === 0) return;
+  const tbody = document.getElementById('tabelaGastos');
+  
+  templates.forEach(tpl => {
+    const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    const lastMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+    
+    while (cur <= lastMonth) {
+      const year = cur.getFullYear();
+      const month = cur.getMonth();
+      let day = tpl.day || 1;
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      if (day > lastDay) day = lastDay;
+      const dateStr = formatDateYYYYMMDD(new Date(year, month, day));
+      const dateObj = parseDateText(dateStr);
+      
+      if (dateObj >= start && dateObj <= end) {
+        if (!existsEntryForTemplateInMonth(tpl, year, month)) {
+          const tr = document.createElement('tr');
+          tr.dataset.templateId = tpl.id;
+          tr.innerHTML = `
+            <td data-label="Data">${dateStr}</td>
+            <td data-label="Descrição">${escapeHtml(tpl.descricao)}</td>
+            <td data-label="Categoria">${tpl.categoriaHTML}</td>
+            <td data-label="Valor">${tpl.valorTexto}</td>
+            <td data-label="Parcela"><span class="parcela-info">1/1</span></td>
+            <td data-label="Tipo"><span class="tipo-recorrente">Recorrente</span></td>
+            <td data-label="Pago?" class="checkbox-cell" role="button" tabindex="0" aria-pressed="false" onclick="marcarPago(this)" onkeydown="if(event.key==='Enter'||event.key===' '){ event.preventDefault(); marcarPago(this); }" title="Marcar como pago">☐</td>
+            <td data-label="Status"><span class="status-pendente">Pendente</span></td>
+            <td data-label="Ação"><button onclick="deletarGasto(this)">✕</button></td>`;
+          tbody.appendChild(tr);
+        }
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+  });
+  
+  salvarNoStorage();
+}
+
+function deletarGasto(btn) {
+  const tr = btn.closest('tr');
+  if (!tr) return;
+  
+  if (!confirm('Deseja realmente excluir este gasto?')) return;
+  
+  // ✅ NOVO: Se é um gasto RECORRENTE, deleta o TEMPLATE também
+  const templateId = tr.dataset.templateId;
+  if (templateId) {
+    console.log('Deletando template recorrente:', templateId);
+    let templates = loadRecurringTemplates();
+    templates = templates.filter(t => t.id !== templateId);
+    saveRecurringTemplates(templates);
+  }
+  
+  // ✅ NOVO: Desmarcar esta linha específica do template para não recriar
+  tr.dataset.markedForDeletion = 'true';
+  
+  tr.remove();
+  salvarNoStorage();
+  filtrarLinhas();
+}
+```
               tbody.appendChild(tr);
             }
           }
